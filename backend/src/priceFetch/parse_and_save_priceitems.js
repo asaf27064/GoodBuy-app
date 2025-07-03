@@ -2,7 +2,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
 const MODE = process.argv[2] === 'update' ? 'update' : 'init';
 const FILE_PATTERN = MODE === 'init'
-  ? /^PriceFull(\d+)-(\d+)-/i
+  ? /^PriceFull(\d+)-(\d+)-(\d+)/i
   : /^Prices?(\d+)-(\d+)-/i;
 
 const cluster        = require('cluster');
@@ -32,12 +32,16 @@ const WRITE_OPTS = { ordered: false, writeConcern: { w: 0 } };
 async function extractSubChainId(filePath) {
   return new Promise((resolve, reject) => {
     const reader = fs.createReadStream(filePath, { encoding: 'utf8' });
-    const parser = sax.createStream(true); // strict mode
+    const parser = sax.createStream(true);
+
+    setTimeout(() => {
+      reject(new Error('Failed to load data!'));
+    }, 2000);
 
     let foundTag = false;
 
     parser.on('opentag', (node) => {
-      if (node.name === 'SubChainId') {
+      if (node.name.toLowerCase() === 'subchainid') {
         foundTag = true;
       }
     });
@@ -56,6 +60,7 @@ async function extractSubChainId(filePath) {
     });
 
     reader.on('error', (err) => {
+      reader.destroy();
       reject(err);
     });
 
@@ -106,6 +111,7 @@ async function master() {
         : reject(new Error(`Worker exit ${code}`)));
     }));
   }
+
   await Promise.all(promises);
   console.log(`🏁 All workers done, processed ${totalInserted} items`);
 
@@ -142,6 +148,8 @@ async function worker() {
     { chainName: c.chainName, chainRef: c._id }
   ]));
 
+
+
   const stores = await db.collection(STORE_COLL)
     .find().project({ _id:1, chainRef:1, subChainId:1, storeId:1 }).toArray();
   const storeMap = new Map(stores.map(s => [
@@ -150,7 +158,6 @@ async function worker() {
   ]));
 
   const slice = JSON.parse(process.env.XML_SLICE || '[]');
-  console.log(slice);
   let inserted = 0;
   let batch = [];
   const pending = [];
@@ -182,6 +189,7 @@ async function worker() {
   };
 
   for (const filePath of slice) {
+    console.log(filePath);
     const fileName = path.basename(filePath);
     const m = fileName.match(FILE_PATTERN);
     if (!m) continue;
@@ -191,16 +199,38 @@ async function worker() {
 
     let subChainId = "";
     try {
-       subChainId = parseInt(await extractSubChainId(filePath)).toString();
+       subChainId = (await extractSubChainId(filePath));
+       if(subChainId == '0') {
+        subChainId = '1';
+       }
     } catch (error) {
        console.error(`Failed to extract subChainId from ${filePath}: ${error.message}`);
+       continue;
     }
-    console.log(subChainId, typeof subChainId);
-    let storeRef = storeMap.get(`${chainInfo.chainRef}_${subChainId}_${storeIdRaw}`);
 
+    /*
+    Assume storeId, subChainId are strings of valid integers from 1 to 999.
+    Edge Cases:
+    1. Leading zeroes in both (yet to see a case where leading zeroes in only one).
+    2. subChainId = 0 in file corresponding to actual subCahinId = 1 in DB (yellow). // handled previous assignemnt of 1 a few lines before.
+    3. subChainId = 000 in file corresponding to actual subChainId = 1 in DB (tiv taam). // handled via fallback 
+    4. actual subChainId = 000 in DB (wolt market, hazihinam) // should work on second attempt.
+      */
+
+    
+    // attempt to find using subchainId and storeId without leading zeroes.
+    let storeRef = storeMap.get(`${chainInfo.chainRef}_${parseInt(subChainId).toString()}_${parseInt(storeIdRaw).toString()}`);
+
+    // attempt to find using subchainId and storeId with leading zeroes.
+    if(!storeRef) {
+      subChainId = subChainId.padStart(3, '0');
+      storeRef = storeMap.get(`${chainInfo.chainRef}_${subChainId}_${storeIdRaw}`);
+    }
+
+    // if no exact match was found, rely on a the first pricefile from the same chain found in storeMap.
     if (!storeRef) {
       for (const [k, v] of storeMap) {
-        if (k.endsWith(`_${storeIdRaw}`)) {
+        if (k.includes(chainInfo.chainRef.toString())) {
           storeRef = v;
           subChainId = k.split('_')[1];
           console.warn(`⚠️ Fallback store for ${fileName}: subChainId=${subChainId}`);
@@ -208,11 +238,13 @@ async function worker() {
         }
       }
     }
+
+    // in case no match was found at all.
     if (!storeRef) {
       console.warn(`⛔ No storeRef for file ${fileName}, skipping`);
       continue;
     }
-
+    
     const up = await pfColl.updateOne(
       { storeRef },
       { $set: { fileName, fetchedAt: new Date() } },
@@ -232,7 +264,7 @@ async function worker() {
       let tag = null;
 
       parser.on('startElement', name => {
-        if (name.toLowerCase() === 'item') {
+        if (name.toLowerCase() === 'item' || name.toLowerCase() === 'product') {
           curr = {
             priceFile: pfId,
             storeRef,
@@ -249,7 +281,7 @@ async function worker() {
       });
 
       parser.on('endElement', name => {
-        if (name.toLowerCase() === 'item' && curr) {
+        if ((name.toLowerCase() === 'item' || name.toLowerCase() === 'product') && curr) {
           batch.push({
             priceFile:           curr.priceFile,
             storeRef:            curr.storeRef,
@@ -292,14 +324,17 @@ async function worker() {
         tag = null;
         if (batch.length >= BATCH_SIZE) flush();
       });
-
+      
       parser.on('end', () => {
         flush();
         Promise.all(pending).then(resolve);
       });
 
-      parser.on('error', () => resolve());
+      parser.on('error', () => {
+        resolve()}
+        );
 
+      fs.createReadStream(filePath).pipe(parser);
     });
   }
 
