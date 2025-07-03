@@ -25,6 +25,23 @@ export default function EditListScreen({ route, navigation }) {
   const { setItemSelectCallback } = useAddItem()
   const pendingMap = useRef(new Map())
 
+      // Remove bottom tab when navigating to this screen.
+      useFocusEffect(
+        useCallback(() => {
+          const parent = navigation.getParent();
+      
+          parent?.setOptions({
+            tabBarStyle: { display: 'none' },
+          });
+      
+          return () => {
+            parent?.setOptions({
+              tabBarStyle: undefined,
+            });
+          };
+        }, [])
+      );
+
   const rand = () => Math.random().toString(36).slice(2) + Date.now().toString(36)
   const pushChange = c => { const id = rand(); pendingMap.current.set(id, { change: { ...c, ackId: id }, snapshot: products }); return id }
 
@@ -74,7 +91,7 @@ export default function EditListScreen({ route, navigation }) {
     catch { setProducts(e.snapshot) }
     finally { pendingMap.current.delete(id); setSaving(pendingMap.current.size > 0) }
   }
-  const saveChangesDebounced = useCallback(debounce(id => saveChanges(id), 120), [])
+  const saveChangesDebounced = useCallback(debounce(id => saveChanges(id), 300), [])
 
   const handleItemSelect = useCallback((selectedItem) => {
     const itemExists = products.some(x => x.product.itemCode === selectedItem.itemCode)
@@ -177,13 +194,13 @@ export default function EditListScreen({ route, navigation }) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerLeft: () => <IconButton icon="arrow-left" color={theme.colors.onPrimary} onPress={() => navigation.navigate('My Shopping Lists')} />,
+      headerLeft: () => <IconButton icon="arrow-left" iconColor={theme.colors.onPrimary} onPress={() => navigation.navigate('My Shopping Lists')} />,
       headerRight: () => (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           {saving && <ActivityIndicator size={16} color={theme.colors.onPrimary} style={{ marginRight: 8 }} />}
           <IconButton 
             icon="plus" 
-            color={theme.colors.onPrimary} 
+            iconColor={theme.colors.onPrimary} 
             onPress={() => {
               setItemSelectCallback(handleItemSelect)
               navigation.navigate('AddItem', { listObj })

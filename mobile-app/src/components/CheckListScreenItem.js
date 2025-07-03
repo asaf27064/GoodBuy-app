@@ -2,6 +2,8 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Card, Checkbox, Text, useTheme } from 'react-native-paper';
 
+// An item in the checklist, containing a checkbox, the product's name and the number of units to purchase.
+
 export default function CheckListScreenItem({ product, checkStatus, handleCheck }) {
   const theme = useTheme();
 

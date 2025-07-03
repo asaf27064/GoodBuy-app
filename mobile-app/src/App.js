@@ -14,11 +14,13 @@ import { createDrawerNavigator, DrawerContentScrollView, DrawerItem } from '@rea
 // Screens & stacks
 import { ShoppingListStack } from './screens/ShoppingListsScreen';
 import ShoppingHistoryScreen from './screens/ShoppingHistoryScreen';
+import HomeScreen from './screens/HomeScreen';
 
 // Auth
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
+
 
 // Price Sync Context
 import { PriceSyncProvider } from './contexts/PriceSyncContext';
@@ -60,6 +62,7 @@ function MainTabs() {
         headerStyle: { backgroundColor: colors.primary },
         headerTintColor: colors.onPrimary,
         headerTitleStyle: { fontWeight: 'bold' },
+        headerTitleAlign: 'center',
         headerRight: () => (
           <TouchableOpacity onPress={() => navigation.openDrawer()} style={styles.menuButton}>
             <MaterialCommunityIcons name="menu" size={24} color={colors.onPrimary} />
@@ -82,6 +85,7 @@ function MainTabs() {
         tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
         tabBarIcon: ({ color, size, focused }) => {
           const icons = {
+            Home: 'home',
             ShopList: 'script-text',
             History: 'clipboard-text-clock'
           };
@@ -89,8 +93,9 @@ function MainTabs() {
         }
       })}
     >
-      <Tab.Screen name="ShopList" component={ShoppingListStack} options={{ title: 'Shopping Lists', headerShown: false }} />
-      <Tab.Screen name="History" component={ShoppingHistoryScreen} options={{ title: 'Purchase History' }} />
+      <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'מסך בית' }} />
+      <Tab.Screen name="ShopList" component={ShoppingListStack} options={{ title: 'רשימות קנייה', headerShown: false }} />
+      <Tab.Screen name="History" component={ShoppingHistoryScreen} options={{ title: 'היסטוריית רכישה' }} />
     </Tab.Navigator>
   );
 }

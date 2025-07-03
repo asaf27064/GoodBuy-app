@@ -90,13 +90,16 @@ function findNearestStores(requestedLocation){
         initialRad *= 2;
     };
 
+    // IMPORTANT NOTE: IF THIS CODE IS CHANGED SO THE RESULTS ARE NOT ORDERED BY DISTANCE,
+    // THE ENTIRE PRICE COMPARISON PIPELINE CODE MUST BE CHANGED ACCORDINGLY.
+
     results = results.sort((a, b) => a.distance - b.distance)
     .slice(0, Math.min(NUM_OF_STORES, results.length)); // Order by proximity from user's location and take the closest 5.
 
 
 
 
-    console.log(results);
+    console.log(JSON.stringify(results[0]));
     console.log(initialRad);
 
     return results;

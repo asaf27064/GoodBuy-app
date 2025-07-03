@@ -1,13 +1,13 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import axios from 'axios'
 import {
   SafeAreaView,
   FlatList,
-  Text,
-  TouchableHighlight,
+  TouchableOpacity,
   Alert
 } from 'react-native'
-import { useTheme } from 'react-native-paper'
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useTheme, Text } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import makeGlobalStyles from '../styles/globalStyles'
 import ProductCheckListItem from '../components/CheckListScreenItem'
@@ -19,13 +19,39 @@ export default function CheckListScreen({ route, navigation }) {
   const styles = makeGlobalStyles(theme)
   const insets = useSafeAreaInsets()
 
-  const listObj = route.params.listObj
-  const [checkedSet, setCheckedSet] = useState(new Set())
-  const [modalVisible, setModalVisible] = useState(false)
+    // Remove bottom tab when navigating to this screen.
+    useFocusEffect(
+      useCallback(() => {
+        navigation.setOptions({
+          headerRight: () => null,
+        });
+  
+        const parent = navigation.getParent();
+    
+        parent?.setOptions({
+          tabBarStyle: { display: 'none' },
+        });
+    
+        return () => {
+          parent?.setOptions({
+            tabBarStyle: undefined,
+          });
+        };
+      }, [])
+    );
 
+  const listObj = route.params.listObj
+
+  // Track which Items were checked by the user.
+  const [checkedSet, setCheckedSet] = useState(new Set())
   const unchecked = listObj.products.filter(p => !checkedSet.has(p.product.itemCode))
   const checked   = listObj.products.filter(p =>  checkedSet.has(p.product.itemCode))
 
+  // Pop-up modal for when the user preses "finish purchase".
+  const [modalVisible, setModalVisible] = useState(false)
+
+
+  // Handle check/uncheck of item on the list.
   const toggle = item => {
     const next = new Set(checkedSet)
     const code = item.product.itemCode
@@ -33,6 +59,8 @@ export default function CheckListScreen({ route, navigation }) {
     setCheckedSet(next)
   }
 
+  // Upon pressing "finish purchase", add list to user's purchase history.
+  // Also empty all items in list and clears its edit history.
   const finishPurchase = async items => {
     try {
       await axios.post(`${API_BASE}/api/Purchases`, {
@@ -40,7 +68,7 @@ export default function CheckListScreen({ route, navigation }) {
         timestamp:         Date.now(),
         purchasedProducts: items.map(({ product, numUnits }) => ({ product, numUnits }))
       })
-      Alert.alert('Success', 'Purchase recorded and list cleared.')
+      Alert.alert("", "הרכישה בוצעה בהצלחה. ניתן לראות אותה במסך היסטוריית הרכישות.")
       setCheckedSet(new Set())
       navigation.goBack()
     } catch (err) {
@@ -68,7 +96,7 @@ export default function CheckListScreen({ route, navigation }) {
         allCheckedFlag={unchecked.length === 0}
       />
 
-      <Text style={styles.headerText}>Products to buy:</Text>
+      <Text style={[styles.headerText, theme.text, {margin: 10}]}>רשימת מוצרים: </Text>
       <FlatList
         data={unchecked}
         keyExtractor={(item, idx) => `${item.product.itemCode}-${idx}`}
@@ -77,7 +105,7 @@ export default function CheckListScreen({ route, navigation }) {
 
       {checked.length > 0 && (
         <>
-          <Text style={styles.headerText}>Products bought:</Text>
+          <Text style={[styles.headerText, theme.text, {margin: 10}]}>מוצרים בעגלה: </Text>
           <FlatList
             data={checked}
             keyExtractor={(item, idx) => `${item.product.itemCode}-${idx}`}
@@ -86,15 +114,15 @@ export default function CheckListScreen({ route, navigation }) {
         </>
       )}
 
-      <TouchableHighlight
+      <TouchableOpacity
         style={[
           styles.addListBtn,
-          { bottom: insets.bottom + 70, backgroundColor: theme.colors.secondary }
+          { bottom: insets.bottom + 70, backgroundColor: theme.colors.primary }
         ]}
         onPress={() => setModalVisible(true)}
       >
-        <Text style={styles.text}>Finish Purchase</Text>
-      </TouchableHighlight>
+        <Text style={styles.text}>סיום רכישה</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   )
 }

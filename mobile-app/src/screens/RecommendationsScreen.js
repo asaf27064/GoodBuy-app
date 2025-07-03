@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { SafeAreaView, FlatList, View, StyleSheet } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native'
 import {
   useTheme,
   Card,
@@ -20,6 +21,23 @@ export default function RecommendationsScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
   const { listObj } = route.params;
   const { user } = useAuth();
+
+        // Remove bottom tab when navigating to this screen.
+        useFocusEffect(
+          useCallback(() => {
+            const parent = navigation.getParent();
+        
+            parent?.setOptions({
+              tabBarStyle: { display: 'none' },
+            });
+        
+            return () => {
+              parent?.setOptions({
+                tabBarStyle: undefined,
+              });
+            };
+          }, [])
+        );
 
   const [mainRecs, setMainRecs] = useState([]);
   const [supplementaryAI, setSupplementaryAI] = useState([]);
@@ -119,8 +137,8 @@ export default function RecommendationsScreen({ route, navigation }) {
   const renderItem = ({ item }) => {
     const lastDate = item.lastPurchased ? new Date(item.lastPurchased) : null;
     const lastLabel = lastDate
-      ? `Last purchased ${lastDate.toLocaleDateString()}`
-      : 'Never purchased before';
+      ? `רכישה אחרונה בתאריך: ${lastDate.toLocaleDateString()}`
+      : 'לא נרכש מעולם';
 
     let methodLabel = '';
     switch (item.method) {
@@ -129,11 +147,11 @@ export default function RecommendationsScreen({ route, navigation }) {
         methodLabel = `Your usual choice on ${todayName}`;
         break;
       }
-      case 'co': methodLabel = 'Goes well together'; break;
-      case 'personal': methodLabel = 'Based on your history'; break;
-      case 'cf': methodLabel = 'Popular with similar users'; break;
-      case 'ai': methodLabel = 'AI suggestion'; break;
-      default: methodLabel = 'Recommended';
+      case 'co': methodLabel = 'משתלב טוב ברשימה'; break;
+      case 'personal': methodLabel = 'לפי רכישות קודמות'; break;
+      case 'cf': methodLabel = 'פופולארי בקרב משתמשים אחרים'; break;
+      case 'ai': methodLabel = 'הצעת המערכת'; break;
+      default: methodLabel = 'מומלץ';
     }
 
     const cardStyle = [
@@ -148,6 +166,13 @@ export default function RecommendationsScreen({ route, navigation }) {
 
     return (
       <Card style={cardStyle}>
+
+            <IconButton
+              icon="close"
+              size={18}
+              onPress={() => handleDismiss(item.itemCode, item.isSupplementary, item.method === 'ai')}
+              iconColor={theme.colors.outline}
+            />
         {item.image && (
           <Card.Cover
             source={{ uri: item.image }}
@@ -184,12 +209,6 @@ export default function RecommendationsScreen({ route, navigation }) {
               )}
             </View>
 
-            <IconButton
-              icon="close"
-              size={18}
-              onPress={() => handleDismiss(item.itemCode, item.isSupplementary, item.method === 'ai')}
-              iconColor={theme.colors.outline}
-            />
           </View>
 
           {item.method === 'ai' && item.suggestionReason && (
@@ -210,7 +229,7 @@ export default function RecommendationsScreen({ route, navigation }) {
               onPress={() => handleAdd(item)}
               style={styles.addButton}
             >
-              Add
+              הוספה
             </Button>
           </View>
         </Card.Content>
@@ -232,7 +251,7 @@ export default function RecommendationsScreen({ route, navigation }) {
       <View style={styles.loader}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={[styles.loadingText, { color: theme.colors.onSurfaceVariant }]}>
-          Finding the best recommendations...
+          מוצא את ההצעות הטובות ביותר...
         </Text>
       </View>
     );
@@ -281,10 +300,10 @@ export default function RecommendationsScreen({ route, navigation }) {
               </View>
             )}
 
-            <Text variant="headlineSmall" style={styles.sectionTitle}>
+            <Text variant="headlineSmall" style={[styles.sectionTitle, theme.text]}>
               {showingExtra && allData.some(item => item.isSupplementary) 
-                ? "All Recommendations" 
-                : "Main Recommendations"
+                ? "כל ההמלצות" 
+                : "המלצות רשימה"
               }
             </Text>
           </View>

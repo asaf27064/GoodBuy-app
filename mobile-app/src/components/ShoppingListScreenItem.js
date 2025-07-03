@@ -1,11 +1,16 @@
-import React from 'react'
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
-import { Card, Title, Paragraph, useTheme } from 'react-native-paper'
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
+import React from 'react';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Card, Text, Paragraph, useTheme } from 'react-native-paper';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
+
+// An item in the shopping list screen.
+// Contains the list's name and usernames of the members of the list, as well as
+// five buttons leading to key app features: list editor, get recommendations, price comparison,
+// check items and view edit history.
 export default function ShoppingListScreenItem({ listObj, navigation }) {
-  const theme = useTheme()
-  const { title, members, _id } = listObj
+  const theme = useTheme();
+  const { title, members, _id } = listObj;
 
   const goToEditList = () =>
     navigation.navigate('EditItems', { listObj })
@@ -21,10 +26,10 @@ export default function ShoppingListScreenItem({ listObj, navigation }) {
   return (
     <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
       <Card.Content>
-        <Title style={{ color: theme.colors.onSurface }}>{title}</Title>
-        <Paragraph style={{ color: theme.colors.onSurfaceDisabled }}>
-          Members: {members.map(u => u.username).join(', ')}
-        </Paragraph>
+        <Text style={[theme.text, theme.headlineMedium, { color: theme.colors.onSurface }]}>{title}</Text>
+        <Text style={[theme.text, theme.mutedText, {marginVertical: 5}]}>
+          חברים ברשימה: {members.map(u => u.username).join(', ')}
+        </Text>
       </Card.Content>
 
       <Card.Actions style={styles.actions}>
@@ -35,7 +40,7 @@ export default function ShoppingListScreenItem({ listObj, navigation }) {
         <ActionButton icon="history" onPress={goToEditHistory} />
       </Card.Actions>
     </Card>
-  )
+  );
 }
 
 function ActionButton({ icon, onPress }) {
