@@ -6,7 +6,7 @@ const Store     = require('../models/Store');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const mode           = process.argv[2] === 'update' ? 'update' : 'init';
-const MAX_RUNTIME_MS = 10 * 60 * 1000;
+const MAX_RUNTIME_MS = 15 * 60 * 1000;
 const baseDir        = __dirname;
 
 const now = () => new Date().toISOString();
@@ -111,11 +111,11 @@ async function main() {
   }
 
   const fetchScripts = [
-    'fetch_hazihinam.js',
-    'fetch_laibcatalog.js',
-    'fetch_mega_carpur_bitan.js',
-    'fetch_pricefull_shufersal.js',
-    'fetch_publishedprices.js'
+    //'fetch_hazihinam.js', // TODO: XML validation in general, normalizing file names for this specifically.
+    'fetch_laibcatalog.js', // fixed by checking for "product" tag in addition to "item"
+    // 'fetch_mega_carpur_bitan.js', // ERROR IN FILE FETCHING
+    'fetch_pricefull_shufersal.js', // (1) Fixed by adding subchain Id extraction method.
+    'fetch_publishedprices.js' //  changing fallback condition.
   ];
   console.log(`\n[${now()}] 📥 STEP 3: Running fetch scripts in parallel (${mode.toUpperCase()})`);
   await Promise.all(
