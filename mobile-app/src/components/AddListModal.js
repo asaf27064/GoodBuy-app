@@ -26,7 +26,6 @@ export default function AddListModal({ isVisible, onClose, createList }) {
   const [titleText, setTitleText] = useState('')
   const [users, setUsers] = useState([])
   const [selected, setSelected] = useState([])
-  const [important, setImportant] = useState(false)
   const [searchText, setSearchText] = useState('')
 
   useEffect(() => {
@@ -66,10 +65,9 @@ export default function AddListModal({ isVisible, onClose, createList }) {
 
   const onSubmit = () => {
     const memberIds = Array.from(new Set([...(selected || []), user.id]))
-    createList(titleText, memberIds, important)
+    createList(titleText, memberIds)
     setTitleText('')
     setSelected([])
-    setImportant(false)
     setSearchText('')
     onClose()
   }
@@ -77,7 +75,6 @@ export default function AddListModal({ isVisible, onClose, createList }) {
   const handleClose = () => {
     setTitleText('')
     setSelected([])
-    setImportant(false)
     setSearchText('')
     onClose()
   }
@@ -97,11 +94,11 @@ export default function AddListModal({ isVisible, onClose, createList }) {
           </TouchableHighlight>
 
           <Text style={[styles.title, { color: theme.colors.onSurface }]}>
-            Create New List
+            יצירת רשימה חדשה
           </Text>
 
           <TextInput
-            placeholder="List name"
+            placeholder="שם רשימה"
             placeholderTextColor={theme.colors.onSurfaceVariant}
             value={titleText}
             onChangeText={setTitleText}
@@ -111,8 +108,8 @@ export default function AddListModal({ isVisible, onClose, createList }) {
             }]}
           />
 
-          <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>
-            Members
+          <Text style={[styles.sectionTitle, theme.text]}>
+            הוספת חברים לרשימה
           </Text>
 
           {/* Search Input */}
@@ -124,7 +121,7 @@ export default function AddListModal({ isVisible, onClose, createList }) {
               style={styles.searchIcon}
             />
             <TextInput
-              placeholder="Search users by username or email..."
+              placeholder="הזן שם משתמש או אימייל..."
               placeholderTextColor={theme.colors.onSurfaceVariant}
               value={searchText}
               onChangeText={setSearchText}
@@ -166,20 +163,6 @@ export default function AddListModal({ isVisible, onClose, createList }) {
                     onPress={() => toggleUser(item._id)}
                     activeOpacity={0.7}
                   >
-                    <View
-                      style={[styles.checkbox, {
-                        borderColor: theme.colors.primary,
-                        backgroundColor: isSel ? theme.colors.primary : 'transparent'
-                      }]}
-                    >
-                      {isSel && (
-                        <MaterialCommunityIcons 
-                          name="check" 
-                          size={14} 
-                          color={theme.colors.onPrimary} 
-                        />
-                      )}
-                    </View>
                     
                     <View style={styles.userInfo}>
                       <Text style={{ 
@@ -199,6 +182,21 @@ export default function AddListModal({ isVisible, onClose, createList }) {
                         </Text>
                       )}
                     </View>
+
+                    <View
+                      style={[styles.checkbox, {
+                        borderColor: theme.colors.primary,
+                        backgroundColor: isSel ? theme.colors.primary : 'transparent'
+                      }]}
+                    >
+                      {isSel && (
+                        <MaterialCommunityIcons 
+                          name="check" 
+                          size={14} 
+                          color={theme.colors.onPrimary} 
+                        />
+                      )}
+                    </View>
                   </TouchableOpacity>
                 )
               }}
@@ -211,28 +209,6 @@ export default function AddListModal({ isVisible, onClose, createList }) {
               {selected.length} member{selected.length !== 1 ? 's' : ''} selected
             </Text>
           )}
-
-          <TouchableOpacity 
-            style={styles.importantRow}
-            onPress={() => setImportant(b => !b)}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.checkbox, {
-              borderColor: theme.colors.primary,
-              backgroundColor: important ? theme.colors.primary : 'transparent'
-            }]}>
-              {important && (
-                <MaterialCommunityIcons 
-                  name="check" 
-                  size={14} 
-                  color={theme.colors.onPrimary} 
-                />
-              )}
-            </View>
-            <Text style={{ marginLeft: 8, color: theme.colors.onSurface }}>
-              Important List
-            </Text>
-          </TouchableOpacity>
 
           <TouchableHighlight 
             onPress={onSubmit} 
@@ -250,7 +226,7 @@ export default function AddListModal({ isVisible, onClose, createList }) {
               color: titleText.trim() ? theme.colors.onPrimary : theme.colors.onSurfaceVariant,
               fontWeight: '600'
             }}>
-              Create List
+              צור רשימה
             </Text>
           </TouchableHighlight>
         </View>

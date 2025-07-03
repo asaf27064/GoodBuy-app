@@ -16,7 +16,9 @@ exports.getUserPurchases = async (req, res) => {
 
     const purchaseHistory = await Purchase.find({
       listId: { $in: listIds }
-    });
+    })
+    .populate('listId', 'title')
+    .sort('-timestamp');
     if (!purchaseHistory.length) {
       return res.status(404).json({ error: 'Purchase history not found' });
     }

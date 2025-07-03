@@ -7,7 +7,7 @@ const router = express.Router();
 router.use(auth);
 
 router.get('/search/:name', productController.searchItems);
-router.get('/:id', productController.getById);
 router.get('/list_price', productController.getListPriceInStores);
+router.get('/:id', productController.getById);
 
 module.exports = router;

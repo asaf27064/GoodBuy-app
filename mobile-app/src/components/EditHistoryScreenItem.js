@@ -1,35 +1,43 @@
 import React, {useState} from 'react';
-import { View, Text, Button, Image, Touchable, TouchableHighlight, StyleSheet, TextInput} from 'react-native';
+import { View, Button, Image, Touchable, TouchableHighlight, StyleSheet, TextInput} from 'react-native';
 import globalStyles from '../styles/globalStyles';
+import formatDate from '../utils/formatDate';
 import  MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons"
 import { COLORS } from '../styles/colors';
+import {Text, useTheme} from 'react-native-paper';
 
-const EditHistoryScreenItem = ({changedProd, changedBy, action, timeStamp,}) => {
+const EditHistoryScreenItem = ({changedProd, changedBy, action, timeStamp}) => {
+
+
+    const theme = useTheme();
     
-    
-    const defineBackgroundColor = (action) => {
+    const defineActionDependantParams = (action) => {
 
         let color = 'white';
+        let actionName = '';
         if (action === "added") {
             color = COLORS.muteGreen;
+            actionName = "הוסף";
         } else if (action === "removed") {
             color = COLORS.muteRed;
+            actionName = "הוסר";
         } else if (action === "updated") {
             color = COLORS.muteYellow;
+            actionName = "עודכן";
         }
         
-        return color;
+        return [color, actionName];
     }
 
-    const bgColor = defineBackgroundColor(action);
-    const formatedDate =  timeStamp.getHours() + ':' + timeStamp.getMinutes() + ' ,' + timeStamp.getDay() + '/' + timeStamp.getMonth() + '/' + timeStamp.getFullYear();
+    const [bgColor, actionName] = defineActionDependantParams(action);
+    const formatedDate =  formatDate(new Date(timeStamp));
 
     return (
         <View style={[styles.container, {backgroundColor: bgColor}]}>
             <Image source={{uri: changedProd.image}} style={styles.prodPic}/>
             <View style={styles.editDetails}>
-                <Text style={globalStyles.headerText}>{changedProd.name}</Text>
-                <Text>{action} by {changedBy} at {formatedDate}</Text>
+                <Text style={[theme.headlineMedium, theme.text]}>{changedProd.name.trim()}</Text>
+                <Text style={[theme.text]}>{actionName} ע"י {changedBy} ב-{formatedDate}</Text>
             </View>
         </View>
     );
@@ -38,7 +46,7 @@ const EditHistoryScreenItem = ({changedProd, changedBy, action, timeStamp,}) => 
 const styles = StyleSheet.create({
         container: {
             borderRadius: 10,
-            margin: 10,
+            marginBottom: 10,
             padding: 10,
             flexDirection: 'row'
         },

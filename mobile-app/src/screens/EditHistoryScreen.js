@@ -1,23 +1,43 @@
-import React, { useState } from 'react'
-import {
-  View,
-  FlatList,
-  SafeAreaView,
-  StyleSheet
-} from 'react-native'
-import { useTheme } from 'react-native-paper'
-import makeGlobalStyles from '../styles/globalStyles'
-import EditHistoryItem from '../components/EditHistoryScreenItem'
+import React, { useState, useCallback } from 'react';
+import {View, FlatList, SafeAreaView, StyleSheet} from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useTheme } from 'react-native-paper';
+import makeGlobalStyles from '../styles/globalStyles';
+import EditHistoryItem from '../components/EditHistoryScreenItem';
 
 export default function EditHistoryScreen({ route }) {
-  const theme = useTheme()
-  const styles = makeStyles(theme)
 
-  const currList = route.params.list.listObj
+  const navigation = useNavigation();
+  const theme = useTheme();
+  const styles = makeStyles(theme);
+
+  // Remove bottom tab and drawer button when navigating to this screen.
+  useFocusEffect(
+    useCallback(() => {
+
+      navigation.setOptions({
+        headerRight: () => null,
+      });
+
+      const parent = navigation.getParent();
+  
+      parent?.setOptions({
+        tabBarStyle: { display: 'none' },
+      });
+  
+      return () => {
+        parent?.setOptions({
+          tabBarStyle: undefined,
+        });
+      };
+    }, [])
+  );
+
+  const currList = route.params.listObj;
   const [editHistory] = useState(currList.editLog)
 
   const renderItem = ({ item }) => (
-    <View style={styles.itemContainer}>
+    <View>
       <EditHistoryItem
         changedProd={item.product}
         changedBy={item.changedBy}
@@ -29,7 +49,7 @@ export default function EditHistoryScreen({ route }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <FlatList data={editHistory} renderItem={renderItem} />
+      <FlatList data={editHistory} style={styles.editHistoryList} renderItem={renderItem} />
     </SafeAreaView>
   )
 }
@@ -40,12 +60,9 @@ function makeStyles(theme) {
     container: {
       ...globals.container
     },
-    itemContainer: {
-      borderRadius: theme.roundness,
-      borderBottomWidth: 2,
-      borderBottomColor: theme.colors.primary,
+    editHistoryList: {
       paddingVertical: 8,
-      paddingHorizontal: 12
+      marginHorizontal: 12
     }
   })
 }

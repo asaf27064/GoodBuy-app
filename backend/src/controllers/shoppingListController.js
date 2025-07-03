@@ -1,26 +1,31 @@
 const ShoppingList = require('../models/shoppingListModel')
 
+
+// Select all shopping lists in which the user is a member from DB.
 exports.getAllUserShoppingLists = async (req, res) => {
   try {
-    const uid = (req.user.sub || req.user._id).toString()
-    const lists = await ShoppingList.find({ members: uid }).populate('members', '-passwordHash')
-    return res.json(lists)
+    const uid = (req.user.sub || req.user._id).toString();
+    const lists = await ShoppingList.find({ members: uid }).populate('members', '-passwordHash');
+    return res.json(lists);
   } catch (e) {
-    return res.status(500).json({ error: e.message })
+    return res.status(500).json({ error: e.message });
   }
 }
 
+// Add new shopping list to DB.
 exports.createList = async (req, res) => {
   try {
-    const uid = (req.user.sub || req.user._id).toString()
-    const { title, importantList, members } = req.body
-    const allMembers = Array.from(new Set([uid, ...(members || []).map(m => m.toString())]))
-    const list = await ShoppingList.create({ title, importantList, members: allMembers, products: [], editLog: [] })
-    const populated = await list.populate('members', '-passwordHash')
-    global.io.to(allMembers.map(id => `user:${id}`)).emit('listCreated', populated)
-    return res.status(201).json(populated)
+    const uid = (req.user.sub || req.user._id).toString();
+    const { title, importantList, members } = req.body;
+    const allMembers = Array.from(new Set([uid, ...(members || []).map(m => m.toString())]));
+    const list = await ShoppingList.create({ title, importantList, members: allMembers, products: [], editLog: [] });
+    const populated = await list.populate('members', '-passwordHash');
+
+    // Emit "listCreated" to all members of the list (will update their shopping lists page).
+    global.io.to(allMembers.map(id => `user:${id}`)).emit('listCreated', populated);
+    return res.status(201).json(populated);
   } catch (e) {
-    return res.status(500).json({ error: e.message })
+    return res.status(500).json({ error: e.message });
   }
 }
 

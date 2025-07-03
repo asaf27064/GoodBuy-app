@@ -1,32 +1,33 @@
 import React from 'react'
-import { Modal, View, Text, TouchableHighlight, StyleSheet } from 'react-native'
+import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import globalStyles from '../styles/globalStyles'
 
-export default function ConfirmPurchaseModal({
-  isVisible,
-  onClose,
-  purchasedItems,
-  handlePurchase,
-  allCheckedFlag
-}) {
+
+// Pop-up modal asking the user to confirm the "finish-purchase" action.
+export default function ConfirmPurchaseModal({isVisible, onClose, purchasedItems, handlePurchase, allCheckedFlag}) {
+  
+
   return (
     <Modal transparent visible={isVisible} animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={styles.container}>
-          <TouchableHighlight onPress={onClose}>
+          <TouchableOpacity onPress={onClose}>
             <Text>✕</Text>
-          </TouchableHighlight>
-          {!allCheckedFlag && <Text style={styles.warn}>You still have unchecked items.</Text>}
-          <Text style={styles.prompt}>Have you finished your shopping?</Text>
+          </TouchableOpacity>
+          {
+          //prompt will not appear when all items in the checklist are checked.
+          !allCheckedFlag && <Text style={styles.warn}>נותרו מוצרים ברשימה שטרם סומנו.</Text>
+          }
+          <Text style={styles.prompt}>סיימת עם הקניות?</Text>
           <Text style={styles.sub}>
-            Confirming will empty the list and record the checked items in your history.
+            לחיצה על "אישור" תרוקן את רשימת הקניות ותמחק את היסטוריית העריכה של הרשימה.
           </Text>
-          <TouchableHighlight
+          <TouchableOpacity
             style={globalStyles.confirmBtn}
             onPress={() => handlePurchase(purchasedItems)}
           >
-            <Text>Confirm</Text>
-          </TouchableHighlight>
+            <Text>אישור</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>

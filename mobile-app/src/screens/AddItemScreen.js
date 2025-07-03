@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react'
+import React, { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react'
 import {
   View,
   FlatList,
@@ -37,6 +37,7 @@ export default function AddItemScreen({ route, navigation }) {
   const insets = useSafeAreaInsets()
   const { listObj } = route.params
   const { callItemSelect } = useAddItem()
+  
 
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
@@ -49,6 +50,13 @@ export default function AddItemScreen({ route, navigation }) {
   const searchBarRef = useRef(null)
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(50)).current
+
+  // Remove Drawer Button from header
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => null,
+    })
+  })
 
   useEffect(() => {
     Animated.parallel([
@@ -189,7 +197,7 @@ export default function AddItemScreen({ route, navigation }) {
           {item.itemName}
         </Text>
         <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
-          {item.category ? `${item.category} • ` : ''}Code: {item.itemCode}
+          {item.category ? `${item.category} • ` : ''}מק"ט: {item.itemCode}
         </Text>
       </View>
       <MaterialCommunityIcons 
@@ -237,12 +245,12 @@ export default function AddItemScreen({ route, navigation }) {
         color={theme.colors.onSurfaceDisabled} 
       />
       <Text style={[styles.emptyTitle, { color: theme.colors.onSurface }]}>
-        {query ? 'No items found' : 'Search for products'}
+        {query ? 'לא נמצאו מוצרים מתאימים' : 'חיפוש מוצרים'}
       </Text>
       <Text style={[styles.emptySubtitle, { color: theme.colors.onSurfaceVariant }]}>
         {query 
-          ? `Try searching for "${query}" differently` 
-          : 'Start typing to find products to add to your list'
+          ? `אין לנו "${query}" במאגר. נסו איות שונה.` 
+          : 'הקלידו בתיבת החיפוש ובחרו מבין האפשרויות.'
         }
       </Text>
     </View>
@@ -268,9 +276,16 @@ export default function AddItemScreen({ route, navigation }) {
         ]}
       >
         <View style={styles.searchRow}>
+        <IconButton
+            icon={viewMode === 'list' ? 'view-grid' : 'format-list-bulleted'}
+            size={24}
+            iconColor={theme.colors.onSurface}
+            style={[styles.viewToggle, { backgroundColor: theme.colors.surfaceVariant }]}
+            onPress={() => setViewMode(prev => (prev === 'list' ? 'grid' : 'list'))}
+          />
           <Searchbar
             ref={searchBarRef}
-            placeholder="Search for products..."
+            placeholder="הזן שם מוצר..."
             onChangeText={onChange}
             value={query}
             style={[styles.searchbar, { backgroundColor: theme.colors.surfaceVariant }]}
@@ -280,20 +295,14 @@ export default function AddItemScreen({ route, navigation }) {
             loading={loading}
             elevation={0}
           />
-          <IconButton
-            icon={viewMode === 'list' ? 'view-grid' : 'format-list-bulleted'}
-            size={24}
-            iconColor={theme.colors.onSurface}
-            style={[styles.viewToggle, { backgroundColor: theme.colors.surfaceVariant }]}
-            onPress={() => setViewMode(prev => (prev === 'list' ? 'grid' : 'list'))}
-          />
+
         </View>
 
         {/* Recent Searches */}
         {!query && (
           <View style={styles.recentsContainer}>
-            <Text style={[styles.recentsTitle, { color: theme.colors.onSurfaceVariant }]}>
-              Recent searches
+            <Text style={[styles.recentsTitle, theme.text, { color: theme.colors.onSurfaceVariant }]}>
+              חיפושים אחרונים
             </Text>
             <View style={styles.chipsRow}>
               {recentSearches.map((term, index) => (
@@ -405,6 +414,7 @@ const styles = StyleSheet.create({
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'flex-end',
     gap: 6,
   },
   chip: {
