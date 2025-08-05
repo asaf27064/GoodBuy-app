@@ -16,6 +16,7 @@ const purchaseSchema = new Schema({
   listId: { type: Schema.Types.ObjectId, ref: 'ShoppingList', required: true },
   timeStamp: { type: Date, default: Date.now },
   purchasedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  membersSnapshot: [{ type: Schema.Types.ObjectId, ref: 'User', index: true }],
   products: [productQtySchema]
 })
 

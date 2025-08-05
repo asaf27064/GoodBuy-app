@@ -29,6 +29,52 @@ exports.createList = async (req, res) => {
   }
 }
 
+exports.leaveList = async (req, res) => {
+  try {
+    const uid   = (req.user.sub || req.user._id).toString();
+    const listId = req.params.id;
+
+    const list = await ShoppingList.findById(listId);
+    if (!list) return res.status(404).json({ error: 'List not found' });
+
+    // user must be a current member
+    const isMember = list.members.map(String).includes(uid);
+    if (!isMember) return res.status(403).json({ error: 'You are not a member of this list' });
+
+    // remove user from members
+    list.members = list.members.filter(m => m.toString() !== uid);
+
+    // optional: keep an audit entry in editLog
+    list.editLog.push({ action: 'member-left', user: uid, ts: new Date() });
+
+    await list.save();
+
+    // notify other members who are viewing the list
+    if (global && global.io) {
+      global.io.to(`list:${listId}`).emit('listUpdated', list);
+      // also tell the user themselves (in case you want to update their UI)
+      global.io.to(`user:${uid}`).emit('listLeft', { listId });
+    }
+
+    // ❗ Minimal behavior: do NOT delete the list even if empty (safer for history).
+    // If you prefer auto-delete when last member leaves, uncomment:
+    /*
+    if (list.members.length === 0) {
+      await ShoppingList.deleteOne({ _id: listId });
+      if (global && global.io) {
+        global.io.to(`list:${listId}`).emit('listDeleted', { listId });
+      }
+      return res.json({ message: 'Left list; list deleted (no members left)' });
+    }
+    */
+
+    return res.json({ message: 'Left list', list });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+};
+
+
 exports.getShoppingList = async (req, res) => {
   try {
     const uid = (req.user.sub || req.user._id).toString()

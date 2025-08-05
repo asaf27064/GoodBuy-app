@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
-import { View, FlatList, SafeAreaView, TouchableOpacity, ActivityIndicator } from 'react-native'
+import { View, FlatList, SafeAreaView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native'
 import { useTheme } from 'react-native-paper'
 import { useFocusEffect } from '@react-navigation/native'
 import makeGlobalStyles from '../styles/globalStyles'
@@ -77,18 +77,17 @@ export default function ShoppingListScreen({ navigation, route }) {
   const { on, off } = useListSocket();
   const { user } = useAuth();
 
+  const userIdStr = (user?.id || user?._id || '').toString();
+
   // Given a current list (prev) and a new list (incoming), merge them into a new list.
   const mergeLists = (prev, incoming) => {
     const map = new Map();
-    
-    // Create key-value pair of (list_id, actual list) for each element in prev.
     prev.forEach(l => map.set(l._id, l));
-
-    // Do the same for incoming, and since it's a map, existing keys will be updated with the new value.
     incoming.forEach(l => map.set(l._id, l));
-
     return Array.from(map.values());
   }
+
+  const isMember = (list) => list?.members?.map(m => (m._id || m).toString()).includes(userIdStr);
 
   // Get all current current user's lists.
   const fetchShoppingLists = async () => {
@@ -101,6 +100,26 @@ export default function ShoppingListScreen({ navigation, route }) {
     finally { setLoading(false) }
   }
 
+  // Leave list
+  const leaveList = async (listId) => {
+    try {
+      await axios.post(`/api/ShoppingLists/${listId}/leave`);
+      setShoppingLists(prev => prev.filter(l => l._id !== listId));
+    } catch (e) {
+      Alert.alert('שגיאה', 'הסרה מהרשימה נכשלה..');
+    }
+  };
+
+  const confirmLeave = (listObj) => {
+    Alert.alert(
+      'פרישה מרשימה',
+      `לפרוש מהרשימה "${listObj.title}"?`,
+      [
+        { text: 'ביטול', style: 'cancel' },
+        { text: 'פרוש', style: 'destructive', onPress: () => leaveList(listObj._id) }
+      ]
+    );
+  };
 
   // Fetches user's list when the component initially mounts.
   useEffect(() => {
@@ -114,7 +133,6 @@ export default function ShoppingListScreen({ navigation, route }) {
     return () => { active = false }
   }, [])
 
-
   // When a user creates a list, all members recieve a "listCreated" emission, invoking this function,
   // Which updates each user's shopping lists.
   useEffect(() => {
@@ -126,6 +144,30 @@ export default function ShoppingListScreen({ navigation, route }) {
     return () => off('listCreated', h)
   }, [on, off, user]);
 
+  // Keep lists in sync when server broadcasts updates/deletes/leaves
+  useEffect(() => {
+    const onUpdated = (l) => {
+      if (isMember(l)) {
+        setShoppingLists(prev => mergeLists(prev, [l]));
+      } else {
+        setShoppingLists(prev => prev.filter(x => x._id !== l._id));
+      }
+    };
+    const onDeleted = ({ listId }) => {
+      setShoppingLists(prev => prev.filter(x => x._id !== listId));
+    };
+    const onLeft = ({ listId }) => {
+      setShoppingLists(prev => prev.filter(x => x._id !== listId));
+    };
+    on('listUpdated', onUpdated);
+    on('listDeleted', onDeleted);
+    on('listLeft', onLeft);
+    return () => {
+      off('listUpdated', onUpdated);
+      off('listDeleted', onDeleted);
+      off('listLeft', onLeft);
+    };
+  }, [on, off, userIdStr]);
 
   // Fetch user's lists when the user presses the "Shopping Lists" bottom tab.
   // Invoked only if the loading state is false, or when a change occurs on the refreshList/timestamp parameters.
@@ -153,7 +195,15 @@ export default function ShoppingListScreen({ navigation, route }) {
     } catch {}
   }
 
-  const renderItem = ({ item }) => <ShoppingListScreenItem listObj={item} navigation={navigation} />
+  const renderItem = ({ item }) => (
+    <TouchableOpacity
+      activeOpacity={0.9}
+      onLongPress={() => confirmLeave(item)}
+      delayLongPress={450}
+    >
+      <ShoppingListScreenItem listObj={item} navigation={navigation} />
+    </TouchableOpacity>
+  )
 
   if (loading) {
     return (

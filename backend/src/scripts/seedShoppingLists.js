@@ -10,7 +10,7 @@ const List = require('../models/shoppingListModel');
   await mongoose.connect(process.env.MONGO_URI);
 
   const users = await User.find();                  // all users
-  const products = await Product.find().limit(100); // sample pool
+  const products = await Product.find();              // sample pool
   const lists = [];
 
   users.forEach(user => {
