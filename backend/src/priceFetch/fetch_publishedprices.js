@@ -2,6 +2,8 @@ const puppeteer = require('puppeteer')
 const axios     = require('axios')
 const fs        = require('fs')
 const path      = require('path')
+const https     = require('https')
+
 
 const DOWNLOAD_DIR = path.join(__dirname, 'Downloads')
 const mode = process.argv[2] === 'update' ? 'update' : 'init'
@@ -72,8 +74,11 @@ async function handleWeb(entry, browser) {
       if (fs.existsSync(out)) continue
       console.log(`   ⬇️  ${f.name}`)
       const res = await axios.get(f.link, {
-        responseType: 'stream', timeout: 90000, decompress: false,
-        headers: { Cookie: cookieHeader, 'Accept-Encoding': 'identity' }
+        responseType: 'stream',
+        timeout: 90000,
+        decompress: false,
+        headers: { Cookie: cookieHeader, 'Accept-Encoding': 'identity' },
+        httpsAgent: new https.Agent({ rejectUnauthorized: false })
       })
       const ws = fs.createWriteStream(out)
       res.data.pipe(ws)
