@@ -67,8 +67,8 @@ function calculateRecencyFrequencyScores(purchaseHistory, now) {
       const purchaseDate = new Date(purchase.timeStamp);
       if (isNaN(purchaseDate.getTime())) return;
 
-      const age = now.getTime() - purchaseDate.getTime();
-      const decay = Math.exp(-DECAY_LAMBDA * age);
+      const age = Math.max(0, now.getTime() - purchaseDate.getTime());
+      const decay = Math.exp(-CONSTANTS.DECAY_LAMBDA * age);
 
       purchase.products?.forEach(({ product, numUnits }) => {
         if (!product?.itemCode) return;

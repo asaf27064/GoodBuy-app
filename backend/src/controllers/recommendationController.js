@@ -30,6 +30,15 @@ exports.getRecs = async (req, res) => {
       ]
     });
 
+  const currentCodes = new Set(list.products.map(p => p.product.itemCode));
+  const overlapBaskets = history.filter(b =>
+    b?.products?.some(x => currentCodes.has(x.product?.itemCode))
+  ).length;
+
+  console.log('Baskets overlapping current list:', overlapBaskets, '/', history.length);
+  console.log('Current list codes:', [...currentCodes]);
+
+
     console.time('recommendation');
     const recsResponse = await RecommendationService.recommend(
       userId,

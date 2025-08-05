@@ -52,6 +52,7 @@ const List     = require('../models/shoppingListModel');
       date.setDate(
         now.getDate() - b * 7 + faker.number.int({ min: -1, max: 1 })
       );
+      if (date > now) date.setTime(now.getTime());
 
       /* random items 5–15 */
       const basketProds = faker.helpers
