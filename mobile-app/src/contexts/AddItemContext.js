@@ -12,12 +12,13 @@ export const AddItemProvider = ({ children }) => {
   const callItemSelect = (item) => {
     if (callbackRef.current) {
       callbackRef.current(item)
-      callbackRef.current = null
     }
   }
   
+  const clearItemSelectCallback = () => { callbackRef.current = null }
+
   return (
-    <AddItemContext.Provider value={{ setItemSelectCallback, callItemSelect }}>
+    <AddItemContext.Provider value={{ setItemSelectCallback, callItemSelect, clearItemSelectCallback }}>
       {children}
     </AddItemContext.Provider>
   )
