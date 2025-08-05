@@ -108,11 +108,15 @@ const List     = require('../models/shoppingListModel');
         });
       }
 
+      /* ✅ NEW: snapshot current members of the list */
+      const membersSnapshot = (listDoc?.members || []).map(m => m);
+
       /* build purchase doc */
       purchases.push({
         listId,
         timeStamp:   date,
         purchasedBy: user._id,
+        membersSnapshot, // ✅ store who were members at purchase time
         products:    basketProds
           .filter(p => p?.name && p.name.trim().length)
           .map(p => ({
@@ -126,7 +130,6 @@ const List     = require('../models/shoppingListModel');
       });
     }
   }
-
 
   await Purchase.deleteMany({});
   await Purchase.insertMany(purchases);

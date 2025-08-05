@@ -4,6 +4,7 @@ const Purchase              = require('../models/purchaseModel');
 const Product               = require('../models/productModel');
 
 const MIN_AI_SCORE = 1; // Minimum score for supplementary AI recommendations
+const LIMIT = 5;
 
 exports.getRecs = async (req, res) => {
   try {
@@ -25,10 +26,13 @@ exports.getRecs = async (req, res) => {
 
     const history = await Purchase.find({
       $or: [
-        { purchasedBy: userId },            // your own receipts
-        { listId: { $in: listIds } }        // shared-list receipts
+        { purchasedBy: userId },
+        { membersSnapshot: userId },
+        { listId: { $in: listIds } }
       ]
-    });
+    })
+    .sort({ timeStamp: -1 })
+    .limit(LIMIT);
 
 
     console.time('recommendation');
