@@ -558,26 +558,37 @@ module.exports = {
 
       if (showAllAI) {
         const usedCodes = new Set(final.map(item => item.code));
-        
-        // Separate AI and non-AI supplementary items
-        const supplementaryAI = (pools.ai || [])
-          .filter(aiItem => !usedCodes.has(aiItem.code))
-          .map(aiItem => ({ ...aiItem, isSupplementary: true }));
+        const usedSupp  = new Set(usedCodes); // track across *all* supplementary
 
+        // --- AI supplementary (dedup) ---
+        const supplementaryAI = [];
+        for (const aiItem of (pools.ai || [])) {
+          if (usedSupp.has(aiItem.code)) continue;
+          supplementaryAI.push({ ...aiItem, isSupplementary: true });
+          usedSupp.add(aiItem.code);
+        }
+
+        // --- Other methods supplementary (dedup + per-method cap) ---
         const supplementaryOther = [];
-        ['habit', 'co', 'cf', 'personal'].forEach(method => {
-          const methodItems = (pools[method] || [])
-            .filter(item => !usedCodes.has(item.code))
-            .slice(0, 3) // Limit per method
-            .map(item => ({ ...item, isSupplementary: true }));
-          supplementaryOther.push(...methodItems);
-        });
+        const perMethodCap = 3;
+        const caps = { habit: 0, co: 0, cf: 0, personal: 0 };
+
+        for (const method of ['habit', 'co', 'cf', 'personal']) {
+          const pool = pools[method] || [];
+          for (const item of pool) {
+            if (caps[method] >= perMethodCap) break;
+            if (usedSupp.has(item.code)) continue;
+            supplementaryOther.push({ ...item, isSupplementary: true });
+            usedSupp.add(item.code);
+            caps[method] += 1;
+          }
+        }
 
         return {
           main: final.map(formatRecommendation),
           supplementaryAI: supplementaryAI.map(formatRecommendation),
           supplementaryOther: supplementaryOther.map(formatRecommendation),
-          totalAIGenerated: aiCandidates.length,
+          totalAIGenerated: (pools.ai || []).length,
           aiUsedInMain: final.filter(item => item.method === 'ai').length,
           totalSupplementaryAI: supplementaryAI.length,
           totalSupplementaryOther: supplementaryOther.length
