@@ -65,8 +65,8 @@ async function downloadLatest (site, items) {
 
 ;(async () => {
   const sites = [
-    'https://prices.ybitan.co.il/',
-    'https://prices.mega.co.il/'
+    //'https://prices.ybitan.co.il/',
+    'https://prices.carrefour.co.il/'
   ]
 
   for (const site of sites) {

@@ -5,6 +5,7 @@ import formatDate from '../utils/formatDate';
 import  MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons"
 import { COLORS } from '../styles/colors';
 import {Text, Card, useTheme, Portal} from 'react-native-paper';
+import { PurchasedProductsModal } from './PurchasedProductsModal';
 
 const ShoppingHistoryScreenItem = ({title, purchasedProds, timeStamp}) => {
 
@@ -46,6 +47,10 @@ const ShoppingHistoryScreenItem = ({title, purchasedProds, timeStamp}) => {
             </Card.Content>
             </View>
         </Card>
+        <PurchasedProductsModal 
+        isVisible={productListModalVisible} 
+        onClose={closeProductListModal}  
+        productsToDisplay={purchasedProds}></PurchasedProductsModal>
         {/*<Portal>
                 <Modal
                     visible={productListModalVisible}

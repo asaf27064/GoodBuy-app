@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { LoadingIndicator } from '../components/LoadingIndicator';
 
 export default function RecommendationsScreen({ route, navigation }) {
   const theme = useTheme();
@@ -247,13 +248,14 @@ export default function RecommendationsScreen({ route, navigation }) {
   ];
 
   if (loading) {
-    return (
+    return (/*
       <View style={styles.loader}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={[styles.loadingText, { color: theme.colors.onSurfaceVariant }]}>
           מוצא את ההצעות הטובות ביותר...
         </Text>
-      </View>
+      </View>*/
+      <LoadingIndicator loadingMessage={"מוצא את ההצעות הטובות ביותר..."}/>
     );
   }
 

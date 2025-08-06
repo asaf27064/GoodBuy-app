@@ -11,7 +11,9 @@ const TARGET_COLL = 'products'
 const TMP_COLL    = TARGET_COLL + '_tmp'
 
 const pipeline = [
-  { $match: { itemStatus: { $ne: 9 } } },
+  { $match: { itemStatus: { $ne: 9 }, $expr: {
+    $gte: [ { $strLenCP: "$itemCode" }, 7 ]
+  }} },
   {
     $group: {
       _id  : '$itemCode',
