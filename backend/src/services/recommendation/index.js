@@ -74,7 +74,11 @@ module.exports = {
         nameToCode, canonicalToCodes, codeToName,
         debug: {}
       };
-      const aiPromise = getAISuggestions(topHistory, currentNames, topN, earlyCtx, C);
+
+      const aiEligible = Object.keys(userScores).length > 0;
+      const aiPromise = aiEligible
+        ? getAISuggestions(topHistory, currentNames, topN, earlyCtx, C)
+        : Promise.resolve([]);
 
       const habit = detectHabits(purchaseHistory, todayWd, currentCodes, C);
       const co = findCo(purchaseHistory, currentCodes, userScores, C);
@@ -90,10 +94,10 @@ module.exports = {
       const boostedPersonal = applyGlobalBoost(personal, globalCounts, maxCount, C);
 
       const pools = {
-        habit: habit.sort((a, b) => b.score - a.score),
-        co: boostedCo.sort((a, b) => b.score - a.score),
-        cf: cf.sort((a, b) => b.score - a.score),
-        personal: boostedPersonal.sort((a, b) => b.score - a.score)
+        habit: (habit || []).sort((a, b) => b.score - a.score),
+        co: (boostedCo || []).sort((a, b) => b.score - a.score),
+        cf: (cf || []).sort((a, b) => b.score - a.score),
+        personal: (boostedPersonal || []).sort((a, b) => b.score - a.score)
       };
 
       const debug = { ai: null, methods: null, final: null, supplementaryAI: null, supplementaryOther: null };
@@ -101,9 +105,18 @@ module.exports = {
       let ai = [];
       try { ai = await aiPromise; } catch {}
 
-      if (ai.length) pools.ai = ai;
+      if (aiEligible && ai.length) pools.ai = ai;
 
-      ensureMethodAvailability(pools, globalCounts, currentCodes, C);
+      const hasAnySignal =
+        (habit?.length || 0) +
+        (co?.length || 0) +
+        (cf?.length || 0) +
+        (personal?.length || 0) > 0;
+
+      if (hasAnySignal) {
+        ensureMethodAvailability(pools, globalCounts, currentCodes, C);
+      }
+
       const final = guaranteeMethodDiversity(pools, topN, C);
 
       const format = (item) => {
