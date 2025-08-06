@@ -26,7 +26,7 @@ function extractJsonArray(rawText) {
   return arr;
 }
 
-// Choose best SKU by heuristics
+// Choose best SKU from a list of codes
 function chooseBestSKU(codes, { userScores, lastTimes, globalCounts }) {
   if (!codes?.length) return null;
   let best = null, bestScore = -1;

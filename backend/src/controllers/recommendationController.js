@@ -23,7 +23,6 @@ exports.getRecs = async (req, res) => {
 
     const history = await Purchase.find({
       $or: [
-        { purchasedBy: userId },
         { membersSnapshot: userId },
         { listId: { $in: listIds } }
       ]

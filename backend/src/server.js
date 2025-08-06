@@ -6,6 +6,7 @@ const cors = require('cors')
 const http = require('http')
 const socketIo = require('socket.io')
 const jwt = require('jsonwebtoken')
+require('./scheduler/priceRefreshScheduler');
 
 const app = express()
 app.use(cors())
