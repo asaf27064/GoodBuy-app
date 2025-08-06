@@ -113,7 +113,7 @@ function AppDrawer() {
         </DrawerContentScrollView>
       )}
     >
-      <Drawer.Screen name="Home" component={MainTabs} />
+      <Drawer.Screen name="Main" component={MainTabs} />
     </Drawer.Navigator>
   );
 }
