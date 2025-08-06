@@ -3,7 +3,7 @@ const ShoppingList = require('../models/shoppingListModel');
 const Purchase = require('../models/purchaseModel');
 const Product = require('../models/productModel');
 
-const LIMIT = 10; // last N purchases
+const LIMIT = 10; // last N purchases (5–10)
 
 exports.getRecs = async (req, res) => {
   try {
@@ -12,12 +12,12 @@ exports.getRecs = async (req, res) => {
     const list = await ShoppingList.findById(req.query.listId);
     if (!list) return res.status(404).json({ error: 'List not found' });
 
-    // optional: ensure access
+    // access check
     if (!list.members.map(String).includes(String(userId))) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    // gather user-related listIds
+    // lists of user
     const listIds = await ShoppingList.find({ members: userId }).distinct('_id');
 
     // compact recent history
@@ -40,7 +40,7 @@ exports.getRecs = async (req, res) => {
       showAllAI
     );
 
-    // support array or object
+    // array or object
     const mainRecs = Array.isArray(recsResponse) ? recsResponse : recsResponse.main;
     const supplementaryAI = recsResponse.supplementaryAI || [];
     const supplementaryOther = recsResponse.supplementaryOther || [];
@@ -55,7 +55,7 @@ exports.getRecs = async (req, res) => {
     const docs = await Product.find({ _id: { $in: allItemCodes } }).lean();
     const prodMap = Object.fromEntries(docs.map(p => [p._id.toString(), p]));
 
-    // pre-index history for quick name/image
+    // quick history index
     const histMap = new Map();
     history.forEach(b => {
       b.products?.forEach(p => {
@@ -64,6 +64,7 @@ exports.getRecs = async (req, res) => {
       });
     });
 
+    // unify shape
     const formatRecommendation = (r) => {
       const meta = prodMap[r.itemCode] || {};
       const seen = histMap.get(r.itemCode);
@@ -81,9 +82,7 @@ exports.getRecs = async (req, res) => {
     };
 
     const mainDetailed = mainRecs.map(formatRecommendation);
-
-    // no extra AI filtering here; service already applied it
-    const supplementaryAIDetailed = supplementaryAI.map(formatRecommendation);
+    const supplementaryAIDetailed = supplementaryAI.map(formatRecommendation); // no extra filter
     const supplementaryOtherDetailed = supplementaryOther.map(formatRecommendation);
 
     const response = {

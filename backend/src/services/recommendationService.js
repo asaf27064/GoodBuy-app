@@ -4,27 +4,37 @@ const ProductModel = require('../models/productModel');
 
 const aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-// Tuned constants
+// tuned constants
 const CONSTANTS = {
   MIN_HABITS: 2,
   CO_OCCURRENCE_ALPHA: 0.5,
   SIMILAR_USERS_LIMIT: 10,
-  GLOBAL_BOOST_RATIO: 0.2,    // a bit stronger prior
+  GLOBAL_BOOST_RATIO: 0.2,
   AI_TIMEOUT: 10000,
-  MIN_AI_SCORE: 0.5,          // allow more AI help
+  MIN_AI_SCORE: 0.5,
   GUARANTEED_METHODS: ['ai', 'co', 'personal', 'cf', 'habit'],
-  HALF_LIFE_DAYS: 60,         // day-based decay
-  DECAY_EPSILON: 0.1          // floor
+  HALF_LIFE_DAYS: 60,
+  DECAY_EPSILON: 0.1
 };
 
 const MS_PER_DAY = 86400000;
 
-// Trim + normalize names (Hebrew-safe)
+// normalize (Hebrew-safe)
 function normName(s) {
   return s?.trim().replace(/\s+/g, ' ').replace(/[״"]/g, '').toLowerCase();
 }
 
-// Day-based exponential decay with floor
+// canonical bucket (strip sizes/units/numbers/punct)
+function canonicalKey(s) {
+  let x = normName(s);
+  x = x.replace(/\d+([.,]\d+)?\s*(קג|ק\"ג|קילו|גר?ם|ג\'|ml|מ\"ל|מיליליטר|ליטר|יחידות?|גלילים?|חבילות?)/g, '');
+  x = x.replace(/\d+([.,]\d+)?/g, '');
+  x = x.replace(/[()\-+*/.,:;'"!?]/g, ' ');
+  x = x.replace(/\s+/g, ' ').trim();
+  return x;
+}
+
+// decay by days + floor
 function decayWeight(ageMs) {
   const ageDays = ageMs / MS_PER_DAY;
   const lambda = Math.log(2) / CONSTANTS.HALF_LIFE_DAYS;
@@ -32,7 +42,7 @@ function decayWeight(ageMs) {
   return Math.max(CONSTANTS.DECAY_EPSILON, w);
 }
 
-// Safe JSON array extraction from LLM text
+// quick JSON array from LLM text
 function extractJsonArray(rawText) {
   if (!rawText || typeof rawText !== 'string') throw new Error('Invalid AI response');
   try {
@@ -48,7 +58,7 @@ function extractJsonArray(rawText) {
   }
 }
 
-// Basic input validation
+// inputs
 function validateInputs(userId, currentProducts, purchaseHistory, topN) {
   if (!userId) throw new Error('userId is required');
   if (!Array.isArray(currentProducts)) throw new Error('currentProducts must be an array');
@@ -56,7 +66,7 @@ function validateInputs(userId, currentProducts, purchaseHistory, topN) {
   if (!Number.isInteger(topN) || topN < 1) throw new Error('topN must be a positive integer');
 }
 
-// Recency × Frequency
+// RF scores
 function calculateRecencyFrequencyScores(purchaseHistory, now) {
   const userScores = {};
   purchaseHistory.forEach(purchase => {
@@ -74,7 +84,7 @@ function calculateRecencyFrequencyScores(purchaseHistory, now) {
   return userScores;
 }
 
-// Weekday habits
+// weekday habits
 function detectHabits(purchaseHistory, todayWd, currentCodes) {
   const weekdayCounts = {};
   const { MIN_HABITS } = CONSTANTS;
@@ -108,11 +118,10 @@ function detectHabits(purchaseHistory, todayWd, currentCodes) {
       })
       .slice(0, 5);
   }
-
   return candidates;
 }
 
-// Co-occurrence with current list
+// co-occurrence
 function findCoOccurrenceCandidates(purchaseHistory, currentCodes, userScores) {
   const coCounts = {};
   const { CO_OCCURRENCE_ALPHA } = CONSTANTS;
@@ -120,9 +129,7 @@ function findCoOccurrenceCandidates(purchaseHistory, currentCodes, userScores) {
   purchaseHistory.forEach(purchase => {
     const codes = purchase.products?.map(p => p.product?.itemCode).filter(Boolean) || [];
     if (!codes.some(c => currentCodes.has(c))) return;
-    codes.forEach(c => {
-      if (!currentCodes.has(c)) coCounts[c] = (coCounts[c] || 0) + 1;
-    });
+    codes.forEach(c => { if (!currentCodes.has(c)) coCounts[c] = (coCounts[c] || 0) + 1; });
   });
 
   return Object.entries(coCounts)
@@ -134,7 +141,7 @@ function findCoOccurrenceCandidates(purchaseHistory, currentCodes, userScores) {
     }));
 }
 
-// Simple item-based CF using Jaccard
+// CF (simple Jaccard)
 async function calculateCollaborativeFiltering(purchaseHistory, userId, currentCodes) {
   try {
     const userSet = new Set(
@@ -180,7 +187,7 @@ async function calculateCollaborativeFiltering(purchaseHistory, userId, currentC
   }
 }
 
-// Global popularity
+// global popularity
 async function getGlobalPopularity() {
   try {
     const globalAgg = await PurchaseModel.aggregate([
@@ -195,7 +202,7 @@ async function getGlobalPopularity() {
   }
 }
 
-// Popularity boost
+// apply popularity boost
 function applyGlobalBoost(candidates, globalCounts, maxCount) {
   const r = CONSTANTS.GLOBAL_BOOST_RATIO;
   return candidates.map(item => ({
@@ -204,8 +211,96 @@ function applyGlobalBoost(candidates, globalCounts, maxCount) {
   }));
 }
 
-// LLM suggestions
-async function getAISuggestions(topHistory, currentNames, topN, nameToCode, currentCodes) {
+// pick 1 SKU among candidates (no embeddings)
+function chooseBestSKU(codes, { userScores, lastTimes, globalCounts }) {
+  if (!codes?.length) return null;
+
+  // 1) max personal score
+  let best = null, bestScore = -1;
+  codes.forEach(code => {
+    const s = userScores[code] || 0;
+    if (s > bestScore) { bestScore = s; best = code; }
+  });
+  if (bestScore > 0) return best;
+
+  // 2) most recent
+  best = null; let bestTime = -1;
+  codes.forEach(code => {
+    const t = lastTimes[code] || -1;
+    if (t > bestTime) { bestTime = t; best = code; }
+  });
+  if (bestTime > 0) return best;
+
+  // 3) global popularity
+  best = null; bestScore = -1;
+  codes.forEach(code => {
+    const g = globalCounts[code] || 0;
+    if (g > bestScore) { bestScore = g; best = code; }
+  });
+  if (best) return best;
+
+  // 4) stable
+  return codes.slice().sort()[0];
+}
+
+// optional tie-break with LLM among fixed candidates
+async function tieBreakWithLLM(aiName, candidateCodes, codeToName) {
+  if (!process.env.GEMINI_API_KEY || candidateCodes.length < 2) return candidateCodes[0];
+  const payload = candidateCodes.map(c => ({ code: c, name: codeToName[c] || '' }));
+  const prompt = `
+בחר קוד אחד שמתאים ביותר ל: "${aiName}"
+בחר אך ורק מתוך:
+${JSON.stringify(payload)}
+ענה בפורמט JSON: {"code":"..."}
+`;
+  try {
+    const r = await aiClient.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: prompt,
+      generationConfig: { temperature: 0 }
+    });
+    const m = r?.text?.match(/"code"\s*:\s*"([^"]+)"/);
+    const chosen = m && m[1];
+    return candidateCodes.includes(chosen) ? chosen : candidateCodes[0];
+  } catch {
+    return candidateCodes[0];
+  }
+}
+
+// resolve AI name -> best code (exact, canonical, tie-break)
+async function resolveNameToBestCode(aiName, ctx) {
+  const { currentCodes, userScores, lastTimes, globalCounts, nameToCode, canonicalToCodes, codeToName } = ctx;
+
+  const exact = nameToCode.get(normName(aiName));
+  if (exact && !currentCodes.has(exact)) return exact;
+
+  const bucket = canonicalToCodes.get(canonicalKey(aiName)) || [];
+  const candidates = bucket.filter(code => !currentCodes.has(code));
+  if (candidates.length === 0) return null;
+  if (candidates.length === 1) return candidates[0];
+
+  const picked = chooseBestSKU(candidates, { userScores, lastTimes, globalCounts });
+  if (!picked) return null;
+
+  // simple check for ties on the three metrics
+  const topPersonal = Math.max(...candidates.map(c => userScores[c] || 0));
+  const samePersonal = candidates.filter(c => (userScores[c] || 0) === topPersonal);
+  if (topPersonal > 0 && samePersonal.length === 1) return picked;
+
+  const topTime = Math.max(...candidates.map(c => lastTimes[c] || -1));
+  const sameTime = candidates.filter(c => (lastTimes[c] || -1) === topTime);
+  if (topTime > 0 && sameTime.length === 1) return picked;
+
+  const topGlob = Math.max(...candidates.map(c => globalCounts[c] || 0));
+  const sameGlob = candidates.filter(c => (globalCounts[c] || 0) === topGlob);
+  if (sameGlob.length === 1) return picked;
+
+  // tie-break via LLM on the fixed candidate set
+  return await tieBreakWithLLM(aiName, candidates, codeToName);
+}
+
+// AI suggestions → mapped codes
+async function getAISuggestions(topHistory, currentNames, topN, ctx) {
   if (!process.env.GEMINI_API_KEY) {
     console.warn('Gemini API key not configured');
     return [];
@@ -228,7 +323,7 @@ Format as a JSON array of objects, e.g.:
     const aiPromise = aiClient.models.generateContent({
       model: 'gemini-2.0-flash',
       contents: prompt,
-      generationConfig: { temperature: 0.2 } // lower variance
+      generationConfig: { temperature: 0.2 }
     });
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('AI request timeout')), CONSTANTS.AI_TIMEOUT)
@@ -237,22 +332,25 @@ Format as a JSON array of objects, e.g.:
 
     if (aiResponse?.text) {
       const aiObjs = extractJsonArray(aiResponse.text);
-      const aiCandidates = aiObjs
-        .map(({ name, reason }, i) => {
-          if (!name || !reason) return null;
-          const trimmed = name.trim();
-          const code = nameToCode[normName(trimmed)];
-          if (!code || currentCodes.has(code)) return null;
-          return {
-            code,
-            score: Math.max(topN * 2, 10) - i,
-            method: 'ai',
-            suggestionName: trimmed,
-            suggestionReason: String(reason).trim()
-          };
-        })
-        .filter(c => c && c.score >= CONSTANTS.MIN_AI_SCORE);
-      return aiCandidates;
+      const aiCandidates = [];
+      for (let i = 0; i < aiObjs.length; i++) {
+        const obj = aiObjs[i] || {};
+        const rawName = obj.name;
+        const reason = obj.reason;
+        if (!rawName || !reason) continue;
+
+        const code = await resolveNameToBestCode(String(rawName).trim(), ctx);
+        if (!code || ctx.currentCodes.has(code)) continue;
+
+        aiCandidates.push({
+          code,
+          score: Math.max(topN * 2, 10) - i,
+          method: 'ai',
+          suggestionName: String(rawName).trim(),
+          suggestionReason: String(reason).trim()
+        });
+      }
+      return aiCandidates.filter(c => c.score >= CONSTANTS.MIN_AI_SCORE);
     }
   } catch (e) {
     console.warn('Gemini AI failed:', e.message);
@@ -260,7 +358,7 @@ Format as a JSON array of objects, e.g.:
   return [];
 }
 
-// Ensure each non-AI method has candidates
+// ensure non-AI coverage
 function ensureMethodAvailability(pools, globalCounts, currentCodes) {
   const NON_AI_METHODS = ['habit', 'co', 'cf', 'personal'];
   const availableGlobal = Object.entries(globalCounts)
@@ -281,7 +379,7 @@ function ensureMethodAvailability(pools, globalCounts, currentCodes) {
   });
 }
 
-// Ensure method diversity
+// diversify main
 function guaranteeMethodDiversity(pools, topN) {
   const NON_AI_METHODS = ['habit', 'co', 'cf', 'personal'];
   const final = [];
@@ -330,24 +428,44 @@ module.exports = {
       const todayWd = now.getDay();
       const currentCodes = new Set(currentProducts.map(p => p.product?.itemCode).filter(Boolean));
 
-      // Load catalog once
-      let allProds, nameToCode, codeToName;
+      // load catalog + indexes
+      let allProds;
       try {
         allProds = await ProductModel.find().lean();
-        nameToCode = Object.fromEntries(
-          allProds.map(p => [normName(p.name), p._id?.toString()]).filter(([k, v]) => k && v)
-        );
-        codeToName = Object.fromEntries(
-          allProds.map(p => [p._id?.toString(), p.name?.trim()]).filter(([id, name]) => id && name)
-        );
       } catch (e) {
         console.error('Error loading product catalog:', e.message);
         return showAllAI ? { main: [], supplementaryAI: [], supplementaryOther: [], totalAIGenerated: 0, aiUsedInMain: 0 } : [];
       }
 
+      const nameToCode = new Map();
+      const canonicalToCodes = new Map();
+      const codeToName = {};
+      allProds.forEach(p => {
+        const id = String(p._id);
+        const n = normName(p.name);
+        const c = canonicalKey(p.name);
+        if (n) nameToCode.set(n, id);
+        if (c) {
+          if (!canonicalToCodes.has(c)) canonicalToCodes.set(c, []);
+          canonicalToCodes.get(c).push(id);
+        }
+        if (p.name) codeToName[id] = p.name.trim();
+      });
+
       const currentNames = currentProducts.map(p => p.product?.name?.trim()).filter(Boolean);
 
-      // Methods
+      // last purchase times per code
+      const lastTimes = {};
+      purchaseHistory.forEach(b => {
+        const t = new Date(b.timeStamp).getTime();
+        b.products?.forEach(p => {
+          const code = p.product?.itemCode;
+          if (!code) return;
+          if (!lastTimes[code] || t > lastTimes[code]) lastTimes[code] = t;
+        });
+      });
+
+      // methods
       const userScores = calculateRecencyFrequencyScores(purchaseHistory, now);
       const habitCandidates = detectHabits(purchaseHistory, todayWd, currentCodes);
       const coCandidates = findCoOccurrenceCandidates(purchaseHistory, currentCodes, userScores);
@@ -357,7 +475,7 @@ module.exports = {
         .filter(([code]) => !currentCodes.has(code))
         .map(([code, score]) => ({ code, score, method: 'personal' }));
 
-      // Popularity
+      // popularity
       const { counts: globalCounts, maxCount } = await getGlobalPopularity();
       const boostedCo = applyGlobalBoost(coCandidates, globalCounts, maxCount);
       const boostedPersonal = applyGlobalBoost(personalCandidates, globalCounts, maxCount);
@@ -369,21 +487,22 @@ module.exports = {
         personal: boostedPersonal.sort((a, b) => b.score - a.score)
       };
 
-      // AI
+      // AI (map names to codes via resolver)
       const topHistory = Object.entries(userScores)
         .sort(([, a], [, b]) => b - a)
         .slice(0, 5)
         .map(([code]) => codeToName[code])
         .filter(Boolean);
 
-      const aiCandidates = await getAISuggestions(topHistory, currentNames, topN, nameToCode, currentCodes);
+      const ctx = { currentCodes, userScores, lastTimes, globalCounts, nameToCode, canonicalToCodes, codeToName };
+      const aiCandidates = await getAISuggestions(topHistory, currentNames, topN, ctx);
       if (aiCandidates.length > 0) pools.ai = aiCandidates;
 
-      // Coverage + diversity
+      // coverage + diversity
       ensureMethodAvailability(pools, globalCounts, currentCodes);
       const final = guaranteeMethodDiversity(pools, topN);
 
-      // Shape formatter
+      // format
       const formatRecommendation = (item) => {
         const dates = purchaseHistory
           .filter(b => b.products?.some(p => p.product?.itemCode === item.code))
