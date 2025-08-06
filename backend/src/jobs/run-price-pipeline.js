@@ -11,13 +11,10 @@ module.exports = async function runPricePipeline() {
 
   const proc = spawn('node', ['priceFetch/pipeline.js', 'update'], {
     cwd: path.join(__dirname, '..'),
-    stdio: 'pipe',    // Use pipe to capture output but not block
-    detached: false   // Keep attached so it completes properly
+    stdio: 'pipe', 
+    detached: false
   });
 
-  // Don't unref - we want to track completion
-
-  // Capture output for debugging (optional)
   let pipelineOutput = '';
   proc.stdout?.on('data', (data) => {
     pipelineOutput += data.toString();
@@ -27,7 +24,7 @@ module.exports = async function runPricePipeline() {
     console.error('Pipeline stderr:', data.toString());
   });
 
-  // Handle completion asynchronously (don't block the main thread)
+  // Handle completion asynchronously
   proc.on('exit', async (code) => {
     console.log(`Pipeline finished with exit code: ${code}`);
     if (pipelineOutput) {
