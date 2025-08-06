@@ -1,22 +1,7 @@
+// AddItemScreen.jsx
 import React, { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react'
-import {
-  View,
-  FlatList,
-  Image,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Dimensions,
-  Animated,
-  StatusBar
-} from 'react-native'
-import {
-  Searchbar,
-  IconButton,
-  useTheme,
-  ActivityIndicator,
-  Chip,
-} from 'react-native-paper'
+import { View, FlatList, Image, Text, StyleSheet, TouchableOpacity, Dimensions, Animated, StatusBar } from 'react-native'
+import { Searchbar, IconButton, useTheme, ActivityIndicator, Chip, Surface, Button } from 'react-native-paper'
 import debounce from 'lodash/debounce'
 import axios from 'axios'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
@@ -48,45 +33,10 @@ export default function AddItemScreen({ route, navigation }) {
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(50)).current
 
-  const existingCodesRef = useRef(
-    new Set(
-      (listObj?.products || [])
-        .map(p => String(p?.product?.itemCode))
-        .filter(Boolean)
-    )
-  )
+  const existingCodesRef = useRef(new Set((listObj?.products || []).map(p => String(p?.product?.itemCode)).filter(Boolean)))
   const [selectedCodes, setSelectedCodes] = useState(new Set())
-
-  const isPreExisting = (code) => existingCodesRef.current.has(String(code))
-  const isSelectedNow = (code) => selectedCodes.has(String(code))
-  const isSelected = (code) => isPreExisting(code) || isSelectedNow(code)
-
-  const markSelected = (code) => {
-    setSelectedCodes(prev => {
-      const next = new Set(prev)
-      next.add(String(code))
-      return next
-    })
-  }
-  const unmarkSelected = (code) => {
-    setSelectedCodes(prev => {
-      const next = new Set(prev)
-      next.delete(String(code))
-      return next
-    })
-  }
-
-  const removeFromList = async (itemCode) => {
-    try {
-      await axios.put(`/api/ShoppingLists/${listObj._id}`, {
-        changes: [
-          { action: 'removed', product: { itemCode: String(itemCode) } }
-        ]
-      })
-    } catch (e) {
-      console.error('removeFromList failed:', e?.response?.data || e.message)
-    }
-  }
+  const selectedMapRef = useRef(new Map())
+  const submittedRef = useRef(false)
 
   useLayoutEffect(() => {
     navigation.setOptions({ headerRight: () => null })
@@ -97,16 +47,17 @@ export default function AddItemScreen({ route, navigation }) {
       Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
     ]).start()
-    setTimeout(() => searchBarRef.current?.focus(), 600)
-  }, [fadeAnim, slideAnim])
+    const t = setTimeout(() => searchBarRef.current?.focus(), 600)
+    const sub = navigation.addListener('beforeRemove', () => {
+      if (!submittedRef.current && selectedCodes.size > 0) submitSelection()
+    })
+    return () => { clearTimeout(t); sub && sub(); doSearch.cancel() }
+  }, [fadeAnim, slideAnim, navigation, selectedCodes])
 
   const doSearch = useCallback(
     debounce(async term => {
       if (!term.trim()) {
-        setResults([])
-        setCategories([])
-        setLoading(false)
-        return
+        setResults([]); setCategories([]); setLoading(false); return
       }
       setLoading(true)
       try {
@@ -114,10 +65,8 @@ export default function AddItemScreen({ route, navigation }) {
         setResults(data.results || [])
         const uniqueCategories = [...new Set((data.results || []).map(i => i.category).filter(Boolean))]
         setCategories(uniqueCategories.slice(0, 6))
-      } catch (e) {
-        console.error(e)
-        setResults([])
-        setCategories([])
+      } catch {
+        setResults([]); setCategories([])
       } finally {
         setLoading(false)
       }
@@ -125,48 +74,44 @@ export default function AddItemScreen({ route, navigation }) {
     []
   )
 
-  const onChange = text => {
-    setQuery(text)
-    setSelectedCategory(null)
-    doSearch(text)
+  const onChange = text => { setQuery(text); setSelectedCategory(null); doSearch(text) }
+  const handleRecentSearch = term => { setQuery(term); doSearch(term) }
+  const handleCategorySelect = category => { setSelectedCategory(selectedCategory === category ? null : category) }
+
+  const isPreExisting = code => existingCodesRef.current.has(String(code))
+  const isSelected = code => selectedCodes.has(String(code))
+
+  const toggleSelect = (item) => {
+    const code = String(item.itemCode)
+    if (isPreExisting(code)) return
+    setRecentSearches(prev => [query, ...prev.filter(s => s !== query)].slice(0, 4))
+    setSelectedCodes(prev => {
+      const next = new Set(prev)
+      if (next.has(code)) {
+        next.delete(code)
+        selectedMapRef.current.delete(code)
+      } else {
+        next.add(code)
+        selectedMapRef.current.set(code, {
+          itemCode: item.itemCode,
+          name: item.itemName,
+          image: item.imageUrl,
+          category: item.category
+        })
+      }
+      return next
+    })
   }
 
-  const handleRecentSearch = (term) => {
-    setQuery(term)
-    doSearch(term)
-  }
-
-  const handleCategorySelect = (category) => {
-    setSelectedCategory(selectedCategory === category ? null : category)
-  }
-
-
-  const handleItemPress = async (item) => {
-    const codeStr = String(item.itemCode)
-
-    if (isPreExisting(codeStr)) {
-      return
+  const submitSelection = () => {
+    const arr = Array.from(selectedMapRef.current.values())
+    if (arr.length) {
+      submittedRef.current = true
+      callItemSelect(arr)
     }
-
-    if (isSelectedNow(codeStr)) {
-      await removeFromList(codeStr)
-      unmarkSelected(codeStr)
-      return
-    }
-
-    const selectedItem = {
-      itemCode: item.itemCode,
-      name: item.itemName,
-      image: item.imageUrl,
-      category: item.category
-    }
-    callItemSelect(selectedItem)
-    markSelected(codeStr)
   }
 
-  const filteredResults = selectedCategory 
-    ? results.filter(item => item.category === selectedCategory)
-    : results
+  const filteredResults = selectedCategory ? results.filter(item => item.category === selectedCategory) : results
 
   const Thumbnail = ({ uri, style }) => {
     const [error, setError] = useState(false)
@@ -185,37 +130,29 @@ export default function AddItemScreen({ route, navigation }) {
             <ActivityIndicator size="small" color={theme.colors.primary} />
           </View>
         )}
-        <Image
-          source={{ uri }}
-          style={[style, { position: imageLoading ? 'absolute' : 'relative' }]}
-          onError={() => setError(true)}
-          onLoad={() => setImageLoading(false)}
-          resizeMode="cover"
-        />
+        <Image source={{ uri }} style={[style, { position: imageLoading ? 'absolute' : 'relative' }]} onError={() => setError(true)} onLoad={() => setImageLoading(false)} resizeMode="cover" />
       </View>
     )
   }
 
   const renderListItem = ({ item }) => {
-    const codeStr = String(item.itemCode)
-    const pre = isPreExisting(codeStr)
-    const sel = isSelected(codeStr)
-    const borderOn = sel
-    const disabled = pre ? true : false
+    const code = String(item.itemCode)
+    const pre = isPreExisting(code)
+    const sel = isSelected(code)
     return (
       <TouchableOpacity
         style={[
           styles.listRow,
           { 
             backgroundColor: theme.colors.surface,
-            borderWidth: borderOn ? 2 : 0,
-            borderColor: borderOn ? theme.colors.primary : 'transparent',
-            opacity: pre ? 0.85 : 1
+            borderWidth: sel ? 2 : 0,
+            borderColor: sel ? theme.colors.primary : 'transparent',
+            opacity: pre ? 0.6 : 1
           }
         ]}
-        onPress={() => handleItemPress(item)}
+        onPress={() => toggleSelect(item)}
         activeOpacity={0.7}
-        disabled={disabled}
+        disabled={pre}
       >
         <Thumbnail uri={item.imageUrl} style={styles.listThumb} />
         <View style={styles.listText}>
@@ -227,18 +164,16 @@ export default function AddItemScreen({ route, navigation }) {
         <MaterialCommunityIcons 
           name={pre ? 'check-decagram' : (sel ? 'check-circle' : 'plus-circle-outline')}
           size={24}
-          color={pre ? theme.colors.primary : theme.colors.primary}
+          color={theme.colors.primary}
         />
       </TouchableOpacity>
     )
   }
 
   const renderGridItem = ({ item }) => {
-    const codeStr = String(item.itemCode)
-    const pre = isPreExisting(codeStr)
-    const sel = isSelected(codeStr)
-    const disabled = pre ? true : false
-
+    const code = String(item.itemCode)
+    const pre = isPreExisting(code)
+    const sel = isSelected(code)
     return (
       <TouchableOpacity
         style={[
@@ -246,12 +181,12 @@ export default function AddItemScreen({ route, navigation }) {
           { 
             backgroundColor: theme.colors.surface,
             borderColor: sel ? theme.colors.primary : theme.colors.outline,
-            opacity: pre ? 0.9 : 1
+            opacity: pre ? 0.6 : 1
           }
         ]}
-        onPress={() => handleItemPress(item)}
+        onPress={() => toggleSelect(item)}
         activeOpacity={0.8}
-        disabled={disabled}
+        disabled={pre}
       >
         <Thumbnail uri={item.imageUrl} style={styles.cardImage} />
         <View style={styles.cardContent}>
@@ -277,19 +212,12 @@ export default function AddItemScreen({ route, navigation }) {
 
   const EmptyState = () => (
     <View style={styles.emptyState}>
-      <MaterialCommunityIcons 
-        name={query ? "magnify-close" : "magnify"} 
-        size={64} 
-        color={theme.colors.onSurfaceDisabled} 
-      />
+      <MaterialCommunityIcons name={query ? "magnify-close" : "magnify"} size={64} color={theme.colors.onSurfaceDisabled} />
       <Text style={[styles.emptyTitle, { color: theme.colors.onSurface }]}>
         {query ? 'לא נמצאו מוצרים מתאימים' : 'חיפוש מוצרים'}
       </Text>
       <Text style={[styles.emptySubtitle, { color: theme.colors.onSurfaceVariant }]}>
-        {query 
-          ? `אין לנו "${query}" במאגר. נסו איות שונה.` 
-          : 'הקלידו בתיבת החיפוש ובחרו מבין האפשרויות.'
-        }
+        {query ? `אין לנו "${query}" במאגר. נסו איות שונה.` : 'הקלידו בתיבת החיפוש ובחרו מבין האפשרויות.'}
       </Text>
     </View>
   )
@@ -297,8 +225,6 @@ export default function AddItemScreen({ route, navigation }) {
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <StatusBar backgroundColor={theme.colors.surface} barStyle={theme.dark ? 'light-content' : 'dark-content'} />
-      
-      {/* Header */}
       <Animated.View 
         style={[
           styles.searchHeader, 
@@ -334,18 +260,10 @@ export default function AddItemScreen({ route, navigation }) {
 
         {!query && (
           <View style={styles.recentsContainer}>
-            <Text style={[styles.recentsTitle, theme.text, { color: theme.colors.onSurfaceVariant }]}>
-              חיפושים אחרונים
-            </Text>
+            <Text style={[styles.recentsTitle, { color: theme.colors.onSurfaceVariant }]}>חיפושים אחרונים</Text>
             <View style={styles.chipsRow}>
               {recentSearches.map((term, index) => (
-                <Chip
-                  key={index}
-                  mode="outlined"
-                  onPress={() => handleRecentSearch(term)}
-                  style={[styles.chip, { borderColor: theme.colors.outline }]}
-                  textStyle={{ color: theme.colors.onSurface }}
-                >
+                <Chip key={index} mode="outlined" onPress={() => handleRecentSearch(term)} style={[styles.chip, { borderColor: theme.colors.outline }]} textStyle={{ color: theme.colors.onSurface }}>
                   {term}
                 </Chip>
               ))}
@@ -355,9 +273,7 @@ export default function AddItemScreen({ route, navigation }) {
 
         {categories.length > 0 && (
           <View style={styles.categoriesContainer}>
-            <Text style={[styles.categoriesTitle, { color: theme.colors.onSurfaceVariant }]}>
-              Filter by category
-            </Text>
+            <Text style={[styles.categoriesTitle, { color: theme.colors.onSurfaceVariant }]}>Filter by category</Text>
             <FlatList
               horizontal
               data={categories}
@@ -368,13 +284,8 @@ export default function AddItemScreen({ route, navigation }) {
                   mode={selectedCategory === item ? 'flat' : 'outlined'}
                   selected={selectedCategory === item}
                   onPress={() => handleCategorySelect(item)}
-                  style={[
-                    styles.categoryChip,
-                    selectedCategory === item && { backgroundColor: theme.colors.primary }
-                  ]}
-                  textStyle={{ 
-                    color: selectedCategory === item ? theme.colors.onPrimary : theme.colors.onSurface 
-                  }}
+                  style={[styles.categoryChip, selectedCategory === item && { backgroundColor: theme.colors.primary }]}
+                  textStyle={{ color: selectedCategory === item ? theme.colors.onPrimary : theme.colors.onSurface }}
                 >
                   {item}
                 </Chip>
@@ -395,6 +306,28 @@ export default function AddItemScreen({ route, navigation }) {
         ListEmptyComponent={!loading ? EmptyState : null}
         showsVerticalScrollIndicator={false}
       />
+
+      {selectedCodes.size > 0 && (
+        <Surface style={{
+          position: 'absolute',
+          left: 12,
+          right: 12,
+          bottom: insets.bottom + 12,
+          borderRadius: 16,
+          paddingHorizontal: 12,
+          paddingVertical: 10,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          elevation: 4,
+          backgroundColor: theme.colors.elevation.level2
+        }}>
+          <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 14 }}>{`נבחרו ${selectedCodes.size} פריטים`}</Text>
+          <Button mode="contained" onPress={() => { submitSelection(); navigation.goBack() }}>
+            הוסף
+          </Button>
+        </Surface>
+      )}
     </View>
   )
 }
@@ -409,48 +342,15 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     paddingBottom: 12,
   },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    gap: 8,
-  },
-  searchbar: {
-    flex: 1,
-    elevation: 0,
-    borderRadius: 12,
-  },
-  viewToggle: {
-    borderRadius: 12,
-  },
-  recentsContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-  },
-  recentsTitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-end',
-    gap: 6,
-  },
+  searchRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 8, gap: 8 },
+  searchbar: { flex: 1, elevation: 0, borderRadius: 12 },
+  viewToggle: { borderRadius: 12 },
+  recentsContainer: { paddingHorizontal: 16, paddingTop: 12 },
+  recentsTitle: { fontSize: 12, fontWeight: '500', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 6 },
   chip: { marginRight: 0 },
   categoriesContainer: { paddingTop: 12 },
-  categoriesTitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 8,
-    marginLeft: 16,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
+  categoriesTitle: { fontSize: 12, fontWeight: '500', marginBottom: 8, marginLeft: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
   categoryChip: { marginLeft: 8, marginRight: 0 },
   list: { paddingBottom: 16, paddingTop: 8 },
   emptyList: { flex: 1, justifyContent: 'center' },
@@ -486,24 +386,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
   },
-  cardImage: {
-    width: '100%',
-    height: CARD_WIDTH * 0.7,
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
-  },
+  cardImage: { width: '100%', height: CARD_WIDTH * 0.7, borderTopLeftRadius: 15, borderTopRightRadius: 15 },
   cardContent: { padding: 12 },
   cardTitle: { fontSize: 14, fontWeight: '600', lineHeight: 18 },
   cardCategory: { fontSize: 11, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
-  addButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 2,
-  },
+  addButton: { position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', elevation: 2 },
 })

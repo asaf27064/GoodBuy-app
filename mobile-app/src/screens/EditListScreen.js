@@ -13,6 +13,8 @@ axios.defaults.baseURL = API_BASE
 
 function debounce(f, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => f(...a), ms) } }
 
+const SAVE_DEBOUNCE_MS = 200
+
 export default function EditListScreen({ route, navigation }) {
   const theme = useTheme()
   const insets = useSafeAreaInsets()
@@ -25,63 +27,49 @@ export default function EditListScreen({ route, navigation }) {
   const { setItemSelectCallback } = useAddItem()
   const pendingMap = useRef(new Map())
 
-      // Remove bottom tab when navigating to this screen.
-      useFocusEffect(
-        useCallback(() => {
-          const parent = navigation.getParent();
-      
-          parent?.setOptions({
-            tabBarStyle: { display: 'none' },
-          });
-      
-          return () => {
-            parent?.setOptions({
-              tabBarStyle: undefined,
-            });
-          };
-        }, [])
-      );
+  useFocusEffect(useCallback(() => {
+    const parent = navigation.getParent()
+    parent?.setOptions({ tabBarStyle: { display: 'none' } })
+    return () => { parent?.setOptions({ tabBarStyle: undefined }) }
+  }, []))
 
   const rand = () => Math.random().toString(36).slice(2) + Date.now().toString(36)
   const pushChange = c => { const id = rand(); pendingMap.current.set(id, { change: { ...c, ackId: id }, snapshot: products }); return id }
 
+  const refreshFromServer = useCallback(async () => {
+    try {
+      const { data } = await axios.get(`/api/ShoppingLists/${listObj._id}`)
+      setListObj(data)
+      setProducts(data.products || [])
+    } catch {}
+  }, [listObj._id])
+
   useEffect(() => {
     joinList(listObj._id)
     startEdit(listObj._id, { username: user.username, listId: listObj._id })
-    const hUpd = d => { if (d._id === listObj._id) { setListObj(d); setProducts(d.products || []) } }
-    const hAck = a => { if (pendingMap.current.has(a.ackId)) { if (a.status === 'error') setProducts(pendingMap.current.get(a.ackId).snapshot); pendingMap.current.delete(a.ackId) } }
-    on('listUpdated', hUpd); on('listAck', hAck)
-    return () => { off('listUpdated', hUpd); off('listAck', hAck); stopEdit(listObj._id, { username: user.username, listId: listObj._id }); leaveList(listObj._id) }
-  }, [listObj._id, joinList, leaveList, startEdit, stopEdit, on, off, user.username])
-
-  useFocusEffect(useCallback(() => {
-    const add = route.params?.addedItem
-    const timestamp = route.params?.timestamp
-    
-    if (add && timestamp) {
-      console.log('📥 useFocusEffect: Adding item from params:', add.name)
-      const itemExists = products.some(x => x.product.itemCode === add.itemCode)
-      if (itemExists) {
-        console.log('⚠️ Item already in list:', add.name)
-        navigation.setParams({ addedItem: undefined, timestamp: undefined })
-        return
-      }
-
-      setProducts(p => [...p, { product: add, numUnits: 1 }])
-      
-      const id = pushChange({ 
-        action: 'added', 
-        product: add, 
-        timeStamp: new Date(), 
-        changedBy: user.username 
-      })
-      saveChangesDebounced(id)
-      
-      console.log('✅ Item added via useFocusEffect:', add.name)
-      
-      navigation.setParams({ addedItem: undefined, timestamp: undefined })
+    const hUpd = d => {
+      if (d._id !== listObj._id) return
+      if (pendingMap.current.size > 0) return
+      setListObj(d)
+      setProducts(d.products || [])
     }
-  }, [route.params?.addedItem, route.params?.timestamp, navigation, products, pushChange, saveChangesDebounced, user.username]))
+    const hAck = a => {
+      if (!pendingMap.current.has(a.ackId)) return
+      const e = pendingMap.current.get(a.ackId)
+      if (a.status === 'error') setProducts(e.snapshot)
+      pendingMap.current.delete(a.ackId)
+      setSaving(pendingMap.current.size > 0)
+      if (pendingMap.current.size === 0) refreshFromServer()
+    }
+    on('listUpdated', hUpd)
+    on('listAck', hAck)
+    return () => {
+      off('listUpdated', hUpd)
+      off('listAck', hAck)
+      stopEdit(listObj._id, { username: user.username, listId: listObj._id })
+      leaveList(listObj._id)
+    }
+  }, [listObj._id, joinList, leaveList, startEdit, stopEdit, on, off, user.username, refreshFromServer])
 
   const saveChanges = async id => {
     const e = pendingMap.current.get(id)
@@ -89,37 +77,56 @@ export default function EditListScreen({ route, navigation }) {
     setSaving(true)
     try { await axios.put(`/api/ShoppingLists/${listObj._id}`, { changes: [e.change] }) }
     catch { setProducts(e.snapshot) }
-    finally { pendingMap.current.delete(id); setSaving(pendingMap.current.size > 0) }
+    finally { }
   }
-  const saveChangesDebounced = useCallback(debounce(id => saveChanges(id), 300), [])
+  const saveChangesDebounced = useCallback(debounce(id => saveChanges(id), SAVE_DEBOUNCE_MS), [])
 
   const handleItemSelect = useCallback((selectedItem) => {
     const itemExists = products.some(x => x.product.itemCode === selectedItem.itemCode)
-    if (itemExists) {
-      return
-    }
-
+    if (itemExists) return
     setProducts(p => [...p, { product: selectedItem, numUnits: 1 }])
-    
-    const id = pushChange({ 
-      action: 'added', 
-      product: selectedItem, 
-      timeStamp: new Date(), 
-      changedBy: user.username 
-    })
+    const id = pushChange({ action: 'added', product: selectedItem, timeStamp: new Date(), changedBy: user.username })
     saveChangesDebounced(id)
   }, [products, pushChange, saveChangesDebounced, user.username])
 
+  const handleBulkSelect = useCallback((items) => {
+    setProducts(prev => {
+      const byCode = new Set(prev.map(x => String(x.product.itemCode)))
+      const addRows = []
+      items.forEach(sel => {
+        const code = String(sel.itemCode)
+        if (!byCode.has(code)) {
+          addRows.push({ product: sel, numUnits: 1 })
+          byCode.add(code)
+          const id = pushChange({ action: 'added', product: sel, timeStamp: new Date(), changedBy: user.username })
+          saveChangesDebounced(id)
+        }
+      })
+      return addRows.length ? [...prev, ...addRows] : prev
+    })
+  }, [pushChange, saveChangesDebounced, user.username])
+
   const removeProduct = useCallback(item => {
     const id = pushChange({ action: 'removed', product: item.product, timeStamp: new Date(), changedBy: user.username })
-    setProducts(p => p.filter(x => x !== item)); saveChangesDebounced(id)
+    setProducts(p => p.filter(x => x !== item))
+    saveChangesDebounced(id)
   }, [saveChangesDebounced, user.username])
 
   const updateQty = useCallback((item, qty) => {
-    const diff = qty - item.numUnits; if (!diff) return
+    const diff = qty - item.numUnits
+    if (!diff) return
     const id = pushChange({ action: 'updated', product: item.product, difference: diff, timeStamp: new Date(), changedBy: user.username })
-    setProducts(p => p.map(x => (x === item ? { ...x, numUnits: qty } : x))); saveChangesDebounced(id)
+    setProducts(p => p.map(x => (x === item ? { ...x, numUnits: qty } : x)))
+    saveChangesDebounced(id)
   }, [saveChangesDebounced, user.username])
+
+  useEffect(() => {
+    setItemSelectCallback((payload) => {
+      if (Array.isArray(payload)) handleBulkSelect(payload)
+      else if (payload) handleItemSelect(payload)
+    })
+    return () => setItemSelectCallback(null)
+  }, [setItemSelectCallback, handleBulkSelect, handleItemSelect])
 
   const renderItem = useCallback(({ item }) => (
     <EditListScreenItem product={item} removeProduct={removeProduct} updateQuantity={updateQty} />
@@ -132,60 +139,15 @@ export default function EditListScreen({ route, navigation }) {
 
   const EditorBanner = () => {
     if (!hasEditors) return null
-    
     return (
-      <View style={{ 
-        position: 'absolute', 
-        top: insets.top + 4, 
-        alignSelf: 'center', 
-        paddingHorizontal: 12, 
-        paddingVertical: 6, 
-        borderRadius: 24, 
-        flexDirection: 'row', 
-        alignItems: 'center', 
-        backgroundColor: theme.colors.elevation.level2,
-        zIndex: 1000,
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      }}>
+      <View style={{ position: 'absolute', top: insets.top + 4, alignSelf: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 24, flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.elevation.level2, zIndex: 1000, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }}>
         {editors.slice(0, 3).map((name, i) => (
-          <Avatar.Text 
-            key={name} 
-            size={24} 
-            label={name[0].toUpperCase()} 
-            style={{ 
-              marginLeft: i ? -8 : 0, 
-              backgroundColor: theme.colors.primaryContainer 
-            }} 
-            labelStyle={{ 
-              color: theme.colors.onPrimaryContainer, 
-              fontSize: 12 
-            }} 
-          />
+          <Avatar.Text key={name} size={24} label={name[0].toUpperCase()} style={{ marginLeft: i ? -8 : 0, backgroundColor: theme.colors.primaryContainer }} labelStyle={{ color: theme.colors.onPrimaryContainer, fontSize: 12 }} />
         ))}
         {editors.length > 3 && (
-          <Avatar.Text 
-            size={24} 
-            label={`+${editors.length - 3}`} 
-            style={{ 
-              marginLeft: -8, 
-              backgroundColor: theme.colors.secondaryContainer 
-            }} 
-            labelStyle={{ 
-              color: theme.colors.onSecondaryContainer, 
-              fontSize: 12 
-            }} 
-          />
+          <Avatar.Text size={24} label={`+${editors.length - 3}`} style={{ marginLeft: -8, backgroundColor: theme.colors.secondaryContainer }} labelStyle={{ color: theme.colors.onSecondaryContainer, fontSize: 12 }} />
         )}
-        <Text style={{ 
-          marginLeft: 8, 
-          color: theme.colors.onSurfaceVariant, 
-          fontSize: 12,
-          fontWeight: '500'
-        }}>
+        <Text style={{ marginLeft: 8, color: theme.colors.onSurfaceVariant, fontSize: 12, fontWeight: '500' }}>
           {editors.length === 1 ? 'editing now' : 'editing now'}
         </Text>
       </View>
@@ -198,18 +160,11 @@ export default function EditListScreen({ route, navigation }) {
       headerRight: () => (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           {saving && <ActivityIndicator size={16} color={theme.colors.onPrimary} style={{ marginRight: 8 }} />}
-          <IconButton 
-            icon="plus" 
-            iconColor={theme.colors.onPrimary} 
-            onPress={() => {
-              setItemSelectCallback(handleItemSelect)
-              navigation.navigate('AddItem', { listObj })
-            }} 
-          />
+          <IconButton icon="plus" iconColor={theme.colors.onPrimary} onPress={() => navigation.navigate('AddItem', { listObj })} />
         </View>
       )
     })
-  }, [navigation, theme.colors.onPrimary, listObj, saving, handleItemSelect, setItemSelectCallback])
+  }, [navigation, theme.colors.onPrimary, listObj, saving])
 
   const topPadding = hasEditors ? insets.top + 44 : insets.top + 8
 
@@ -227,25 +182,12 @@ export default function EditListScreen({ route, navigation }) {
         updateCellsBatchingPeriod={20}
         maxToRenderPerBatch={20}
         removeClippedSubviews
-        contentContainerStyle={{ 
-          padding: 8, 
-          paddingTop: topPadding,
-          paddingBottom: insets.bottom + 16 
-        }}
+        contentContainerStyle={{ padding: 8, paddingTop: topPadding, paddingBottom: insets.bottom + 16 }}
       />
       {saving && (
-        <View style={{ 
-          padding: 8, 
-          backgroundColor: theme.colors.surfaceVariant, 
-          borderTopWidth: 1, 
-          borderColor: theme.colors.outline, 
-          paddingBottom: insets.bottom + 8, 
-          flexDirection: 'row', 
-          alignItems: 'center', 
-          justifyContent: 'center' 
-        }}>
+        <View style={{ padding: 8, backgroundColor: theme.colors.surfaceVariant, borderTopWidth: 1, borderColor: theme.colors.outline, paddingBottom: insets.bottom + 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />
-          <Text style={{ fontSize: 12, color: theme.colors.onSurfaceVariant }}>שומר שינויים...</Text>
+          <Text style={{ fontSize: 12, color: theme.colors.onSurfaceVariant }}>Saving...</Text>
         </View>
       )}
     </SafeAreaView>
