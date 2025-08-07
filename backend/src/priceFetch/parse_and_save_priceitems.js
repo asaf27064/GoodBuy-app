@@ -189,7 +189,7 @@ async function worker() {
   };
 
   for (const filePath of slice) {
-    console.log(filePath);
+    //console.log(filePath);
     const fileName = path.basename(filePath);
     const m = fileName.match(FILE_PATTERN);
     if (!m) continue;

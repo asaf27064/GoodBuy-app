@@ -6,13 +6,16 @@ import {
   Card,
   Button,
   Text,
+  Paragraph,
   ActivityIndicator,
   IconButton,
   Chip,
+  Badge,
 } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { LoadingIndicator } from '../components/LoadingIndicator';
 
 export default function RecommendationsScreen({ route, navigation }) {
   const theme = useTheme();
@@ -20,13 +23,22 @@ export default function RecommendationsScreen({ route, navigation }) {
   const { listObj } = route.params;
   const { user } = useAuth();
 
-  useFocusEffect(
-    useCallback(() => {
-      const parent = navigation.getParent();
-      parent?.setOptions({ tabBarStyle: { display: 'none' } });
-      return () => parent?.setOptions({ tabBarStyle: undefined });
-    }, [])
-  );
+        // Remove bottom tab when navigating to this screen.
+        useFocusEffect(
+          useCallback(() => {
+            const parent = navigation.getParent();
+        
+            parent?.setOptions({
+              tabBarStyle: { display: 'none' },
+            });
+        
+            return () => {
+              parent?.setOptions({
+                tabBarStyle: undefined,
+              });
+            };
+          }, [])
+        );
 
   const [mainRecs, setMainRecs] = useState([]);
   const [supplementaryAI, setSupplementaryAI] = useState([]);
@@ -34,8 +46,6 @@ export default function RecommendationsScreen({ route, navigation }) {
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [showingExtra, setShowingExtra] = useState(false);
-
-  const [selectedCodes, setSelectedCodes] = useState(new Set());
 
   const fetchRecommendations = async (showAllAI = false) => {
     try {
@@ -50,8 +60,11 @@ export default function RecommendationsScreen({ route, navigation }) {
         setStats({});
       } else {
         setMainRecs(data.main || []);
+        
+        // Separate AI and non-AI supplementary items
         const aiItems = (data.supplementaryAI || []).filter(item => item.method === 'ai');
         const otherItems = (data.supplementaryAI || []).filter(item => item.method !== 'ai');
+        
         setSupplementaryAI(aiItems);
         setSupplementaryOther(otherItems);
         setStats(data.stats || {});
@@ -68,30 +81,24 @@ export default function RecommendationsScreen({ route, navigation }) {
     })();
   }, [listObj._id]);
 
-  const handleToggleExtra = () => setShowingExtra(!showingExtra);
+  const handleToggleExtra = () => {
+    setShowingExtra(!showingExtra);
+  };
 
-  const handleAdd = async (item) => {
-    const code = String(item.itemCode);
-    if (selectedCodes.has(code)) {
-      setSelectedCodes(prev => {
-        const next = new Set(prev);
-        next.delete(code);
-        return next;
-      });
-      return;
-    }
-    try {
-      const productPayload = {
-        itemCode: item.itemCode,
-        name: item.name,
-        image: item.image || ''
-      };
-      await axios.put(`/api/ShoppingLists/${listObj._id}`, {
-        changes: [{ action: 'added', product: productPayload }]
-      });
-      setSelectedCodes(prev => new Set(prev).add(code));
-    } catch (e) {
-    }
+  const handleAdd = (item) => {
+    const selectedItem = {
+      itemCode: item.itemCode,
+      name: item.name,
+      image: item.image,
+      category: item.category
+    };
+    
+    // Navigate back to EditItems with the item
+    navigation.navigate('EditItems', { 
+      listObj,
+      addedItem: selectedItem,
+      timestamp: Date.now()
+    });
   };
     
   const handleDismiss = (code, isSupplementary = false, isAI = false) => {
@@ -104,12 +111,6 @@ export default function RecommendationsScreen({ route, navigation }) {
     } else {
       setMainRecs(prev => prev.filter(r => r.itemCode !== code));
     }
-    // also clear local selection if dismissed
-    setSelectedCodes(prev => {
-      const next = new Set(prev);
-      next.delete(String(code));
-      return next;
-    });
   };
 
   const getMethodIcon = (method) => {
@@ -154,9 +155,6 @@ export default function RecommendationsScreen({ route, navigation }) {
       default: methodLabel = 'מומלץ';
     }
 
-    // is selected
-    const isSelected = selectedCodes.has(String(item.itemCode));
-
     const cardStyle = [
       styles.card,
       { backgroundColor: theme.colors.surface },
@@ -164,19 +162,18 @@ export default function RecommendationsScreen({ route, navigation }) {
         backgroundColor: theme.colors.surfaceVariant,
         borderLeftWidth: 3,
         borderLeftColor: getMethodColor(item.method)
-      },
-      // selected highlight
-      isSelected && { borderWidth: 2, borderColor: theme.colors.primary }
+      }
     ];
 
     return (
       <Card style={cardStyle}>
-        <IconButton
-          icon="close"
-          size={18}
-          onPress={() => handleDismiss(item.itemCode, item.isSupplementary, item.method === 'ai')}
-          iconColor={theme.colors.outline}
-        />
+
+            <IconButton
+              icon="close"
+              size={18}
+              onPress={() => handleDismiss(item.itemCode, item.isSupplementary, item.method === 'ai')}
+              iconColor={theme.colors.outline}
+            />
         {item.image && (
           <Card.Cover
             source={{ uri: item.image }}
@@ -212,6 +209,7 @@ export default function RecommendationsScreen({ route, navigation }) {
                 </Chip>
               )}
             </View>
+
           </View>
 
           {item.method === 'ai' && item.suggestionReason && (
@@ -227,13 +225,12 @@ export default function RecommendationsScreen({ route, navigation }) {
               {lastLabel}
             </Text>
             <Button
-              mode={isSelected ? 'contained' : 'outlined'}
+              mode="contained"
               compact
-              icon={isSelected ? 'check' : undefined}
               onPress={() => handleAdd(item)}
               style={styles.addButton}
             >
-              {isSelected ? 'נוסף' : 'הוספה'}
+              הוספה
             </Button>
           </View>
         </Card.Content>
@@ -243,19 +240,22 @@ export default function RecommendationsScreen({ route, navigation }) {
 
   const totalExtra = supplementaryAI.length + supplementaryOther.length;
   const aiCount = supplementaryAI.length;
+  const otherCount = supplementaryOther.length;
+
   const allData = [
     ...mainRecs,
     ...(showingExtra ? [...supplementaryAI, ...supplementaryOther] : [])
   ];
 
   if (loading) {
-    return (
+    return (/*
       <View style={styles.loader}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={[styles.loadingText, { color: theme.colors.onSurfaceVariant }]}>
           מוצא את ההצעות הטובות ביותר...
         </Text>
-      </View>
+      </View>*/
+      <LoadingIndicator loadingMessage={"מוצא את ההצעות הטובות ביותר..."}/>
     );
   }
 
@@ -284,9 +284,9 @@ export default function RecommendationsScreen({ route, navigation }) {
               </View>
             )}
 
-            {/* Header actions */}
-            <View style={styles.actionsRow}>
-              {totalExtra > 0 && (
+            {/* Single Toggle Button */}
+            {totalExtra > 0 && (
+              <View style={styles.toggleButtonContainer}>
                 <Button
                   mode={showingExtra ? "contained" : "outlined"}
                   onPress={handleToggleExtra}
@@ -299,8 +299,8 @@ export default function RecommendationsScreen({ route, navigation }) {
                   }
                   {!showingExtra && aiCount > 0 && ` • ${aiCount} AI`}
                 </Button>
-              )}
-            </View>
+              </View>
+            )}
 
             <Text variant="headlineSmall" style={[styles.sectionTitle, theme.text]}>
               {showingExtra && allData.some(item => item.isSupplementary) 
@@ -339,31 +339,104 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16
   },
-  loadingText: { marginTop: 8 },
-  header: { marginBottom: 16 },
+  loadingText: {
+    marginTop: 8,
+  },
+  header: {
+    marginBottom: 16,
+  },
   compactStats: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 12, gap: 8
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    gap: 8,
   },
-  statItem: { flexDirection: 'row', alignItems: 'center' },
-  statIcon: { margin: 0 },
-  actionsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }, // Centered
-  sectionTitle: { fontWeight: 'bold', marginBottom: 8 },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statIcon: {
+    margin: 0,
+  },
+  toggleButtonContainer: {
+    marginBottom: 16,
+  },
+  toggleButton: {
+  },
+  sectionTitle: {
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
   card: {
-    marginBottom: 12, borderRadius: 12, elevation: 2, overflow: 'hidden'
+    marginBottom: 12,
+    borderRadius: 12,
+    elevation: 2,
+    overflow: 'hidden',
   },
-  cardCover: { height: 120, borderTopLeftRadius: 12, borderTopRightRadius: 12 },
-  cardContent: { padding: 16 },
-  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  methodIcon: { margin: 0, marginRight: 8 },
-  titleContent: { flex: 1 },
-  itemTitle: { fontWeight: '600', marginBottom: 2 },
-  methodLabel: { fontSize: 12 },
-  extraChip: { height: 24, marginLeft: 8 },
-  reasonContainer: { backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 8, padding: 12, marginBottom: 12 },
-  reasonText: { fontStyle: 'italic', lineHeight: 18 },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  dateText: { fontSize: 11, flex: 1 },
-  addButton: { borderRadius: 20 },
-  emptyContainer: { marginTop: 60, alignItems: 'center', paddingHorizontal: 32 },
+  cardCover: {
+    height: 120,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  cardContent: {
+    padding: 16,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  methodIcon: {
+    margin: 0,
+    marginRight: 8,
+  },
+  titleContent: {
+    flex: 1,
+  },
+  itemTitle: {
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  methodLabel: {
+    fontSize: 12,
+  },
+  extraChip: {
+    height: 24,
+    marginLeft: 8,
+    
+  },
+  reasonContainer: {
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  reasonText: {
+    fontStyle: 'italic',
+    lineHeight: 18,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dateText: {
+    fontSize: 11,
+    flex: 1,
+  },
+  addButton: {
+    borderRadius: 20,
+  },
+  emptyContainer: { 
+    marginTop: 60, 
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
 });

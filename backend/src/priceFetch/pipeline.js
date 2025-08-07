@@ -111,9 +111,9 @@ async function main() {
   }
 
   const fetchScripts = [
-    //'fetch_hazihinam.js', // TODO: XML validation in general, normalizing file names for this specifically.
+    'fetch_hazihinam.js', // fixed by normalizing file names for this specifically.
     'fetch_laibcatalog.js', // fixed by checking for "product" tag in addition to "item"
-    // 'fetch_mega_carpur_bitan.js', // ERROR IN FILE FETCHING
+    'fetch_mega_carpur_bitan.js', // fixed by not fetching from bitan.
     'fetch_pricefull_shufersal.js', // (1) Fixed by adding subchain Id extraction method.
     'fetch_publishedprices.js' //  changing fallback condition.
   ];
@@ -125,6 +125,8 @@ async function main() {
   );
 
   await runCommand('STEP 4: decompress.js', 'node', ['decompress.js']);
+
+  await runCommand('STEP 4b: normalize_file_name.js', 'node', ['normalize_file_name.js', mode]);
 
   await runCommand(
     'STEP 5: parse_and_save_priceitems.js',

@@ -18,7 +18,7 @@ import {
 import globalStyles from '../styles/globalStyles';
 import { COLORS } from '../styles/colors';
 
-export const DisplayStoreProductsModal = ({isVisible, onClose, productsToDisplay, missingListFlag}) => {
+export const PurchasedProductsModal = ({isVisible, onClose, productsToDisplay}) => {
 
     const theme = useTheme();
 
@@ -38,7 +38,7 @@ export const DisplayStoreProductsModal = ({isVisible, onClose, productsToDisplay
           );
     };
 
-
+    // TODO: make all text centerd, can be done using "jusify-content" for each cell, including header cells.
     return (
         <Portal>
             <Modal
@@ -46,34 +46,21 @@ export const DisplayStoreProductsModal = ({isVisible, onClose, productsToDisplay
         onDismiss={() => onClose()}
         contentContainerStyle={styles.modalContainer}
         >
-        {!missingListFlag && (<Text variant="titleMedium" style={[theme.headlineMedium, theme.text]}>מוצרים זמינים לרכישה</Text>)}
-        {missingListFlag && (<Text variant="titleMedium" style={[theme.headlineMedium, theme.text]}>מוצרים חסרים</Text>)}
+        <Text variant="titleMedium" style={[theme.headlineMedium, theme.text]}>מוצרים שנרכשו:</Text>
         <ScrollView style={styles.tableContainer}>
       <DataTable>
-        {/* Table Header */}
+        {/* Table Header */ }
         <DataTable.Header>
           <DataTable.Title>שם מוצר</DataTable.Title>
           <DataTable.Title numeric>כמות</DataTable.Title>
-          {!missingListFlag && (
-            <>
-                <DataTable.Title numeric>מחיר ליחידה</DataTable.Title>
-                <DataTable.Title numeric>סה"כ</DataTable.Title>
-            </>
-          )}
         </DataTable.Header>
 
-        {/* Table Rows */}
+        {/* Table Rows*/ }
         {productsToDisplay.map((item, index) => {
           return (
             <DataTable.Row key={index} style={styles.tableRow}>
-              <DataTable.Cell><Text numberOfLines={0} ellipsizeMode="clip">{item.name}</Text></DataTable.Cell>
-              <DataTable.Cell numeric>{item.amount}</DataTable.Cell>
-              {!missingListFlag && (
-              <>
-                <DataTable.Cell numeric>{item.unitPrice.toFixed(2)}</DataTable.Cell>
-                <DataTable.Cell numeric>{(item.unitPrice * item.amount).toFixed(2)}</DataTable.Cell>
-              </>
-              )}
+              <DataTable.Cell><Text numberOfLines={0} ellipsizeMode="clip">{item.product.name}</Text></DataTable.Cell>
+              <DataTable.Cell numeric>{item.numUnits}</DataTable.Cell>
             </DataTable.Row>
           );
         })}

@@ -15,6 +15,7 @@ import PriceCompScreenItem from '../components/PriceCompStoreItem';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE } from '../config';
 import fetchNearestStores from '../utils/fetchNearestStores';
+import { LoadingIndicator } from '../components/LoadingIndicator';
 
 const NUM_PAGES = 3; // define number of pages in multi-page form.
 
@@ -54,6 +55,10 @@ function PriceComparisonScreen({route}) {
   const handlePageForward = async function() {
     switch(page) {
       case 1: {
+        if(!checkedLocation) {
+          alert("You must select a location from the list.");
+          return;
+        }
         break;
       }
       
@@ -157,11 +162,11 @@ function PriceComparisonScreen({route}) {
     useEffect(() => {
       const fetchLocations = async () => {
         try {
-          const { latitude, longitude } = await getCurrentLocation();
+          //const { latitude, longitude } = await getCurrentLocation();
 
           const locationName = "מיקום נוכחי";
-          const currLocNearestStores = await fetchNearestStores(latitude, longitude);
-          const locationInfo = [locationName, { locationAddress: "", nearestStores: currLocNearestStores }];
+          const currLocNearestStores = [];
+          const locationInfo = [locationName, { locationAddress: "", nearestStores: currLocNearestStores, loading: true}];
 
           const allKeys = await AsyncStorage.getAllKeys();
           const locationStoreKeys = allKeys.filter(key => key.startsWith(LOCAL_STORAGE_IDENTIFIER));
@@ -174,8 +179,32 @@ function PriceComparisonScreen({route}) {
           console.error('Error fetching locations', error);
         }
       };
+
+      const updateCurrentLocation = async () => {
+
+        try {
+          const { latitude, longitude } = await getCurrentLocation();
+
+          const locationName = "מיקום נוכחי";
+          const currLocNearestStores = await fetchNearestStores(latitude, longitude);
+          const updatedLocationInfo = [locationName, { locationAddress: "", nearestStores: currLocNearestStores, loading: false }];
+
+          setSavedLocations(prev =>
+            prev.map(loc =>
+              loc[0] === 'מיקום נוכחי' ? updatedLocationInfo : loc
+            )
+            
+          );
+
+        } catch (error) {
+          console.error('Error updating current location', error);
+
+        }
+      }
     
       fetchLocations();
+      updateCurrentLocation();
+
     }, []);
 
     const [checkedLocation, setCheckedLocation] = useState(null);
@@ -186,14 +215,16 @@ function PriceComparisonScreen({route}) {
       const locName = (locKey.startsWith(LOCAL_STORAGE_IDENTIFIER)) ? locKey.substring(LOCAL_STORAGE_IDENTIFIER.length) : locKey;
       const locAddress = item[1].locationAddress;
       const locNearestStores = item[1].nearestStores;
+      const checkboxLabel = (item[1].loading) ? locName + '\n' + locAddress + "(מחפש חנויות קרובות...)" : locName + '\n' + locAddress
 
       return (
         <Card style={styles.card}>
           <Card.Content>
             <Checkbox.Item
-              label={locName + '\n' + locAddress}
+              label={checkboxLabel}
               position="leading"
               status={checkedLocation === locKey ? 'checked' : 'unchecked'}
+              disabled={locKey === "מיקום נוכחי" && item[1].loading}
               onPress={() => {
 
                 setCheckedLocation(locKey);
@@ -227,6 +258,7 @@ function PriceComparisonScreen({route}) {
               )}
 
             {page === 2 && (
+
               <View style={styles.optionContainer}>
                 <Text style={[theme.headlineMedium, theme.text]}>
                   בחר את ההעדפה שלך:{'\n'}

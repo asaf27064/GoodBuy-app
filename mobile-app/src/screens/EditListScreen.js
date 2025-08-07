@@ -245,7 +245,7 @@ export default function EditListScreen({ route, navigation }) {
           justifyContent: 'center' 
         }}>
           <ActivityIndicator size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />
-          <Text style={{ fontSize: 12, color: theme.colors.onSurfaceVariant }}>שומר שינויים...</Text>
+          <Text style={{ fontSize: 12, color: theme.colors.onSurfaceVariant }}>Saving...</Text>
         </View>
       )}
     </SafeAreaView>

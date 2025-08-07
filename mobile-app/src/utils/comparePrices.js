@@ -24,6 +24,10 @@ const sumArray = (arr) => {
     return arr.reduce((partialSum, a) => partialSum + a, 0);
 };
 
+const DEFAULT_AVG_PRICE = 35.00 // // roughly the average of a single product.
+const TWO_STORES_MODIFIER_PRICE = 1.2;
+const TWO_STOREs_MODIFIER_COMPLETENESS = 1.3;
+
 // purchaseOption is an object in this format: { storeId, distance, productPrices: [{productCode, amount, unitPrice}] }
 // mode is a string, currently either "strict" or "lax".
 
@@ -39,14 +43,15 @@ function comparePrices(purchaseOptions, mode){
 
 
         switch(mode){
-            // TODO: maybe strings should have the 50% completness threshold? It might lose cheap options due to not having 70% of the list.
 
             case 'favor_price':
-                return [Math.ceil(numItems*0.5), 1.25, 1.5];
+                const penaltyPrice = Math.max(1.2, (2.2-(Math.sqrt(numItems)/3)));
+                return [Math.ceil(numItems*0.4), penaltyPrice, penaltyPrice*TWO_STORES_MODIFIER_PRICE];
             case 'favor_completeness':
-                return [Math.ceil(numItems*0.7), 1.5, 2.0];
+                const penaltyCompleteness = Math.max(1.3, (2.2-(Math.sqrt(numItems)/4)));
+                return [Math.ceil(numItems*0.6), penaltyCompleteness, penaltyCompleteness*TWO_STOREs_MODIFIER_COMPLETENESS];
             default:
-                [Math.ceil(numItems*0.5), 1, 1];
+                [Math.ceil(numItems*0.4), 1, 1];
         }
       })();
       
@@ -62,7 +67,7 @@ function comparePrices(purchaseOptions, mode){
             sumPrices += sumArray(entry.productPrices.map(item => item.unitPrice));
         }
         if (nonNullItemsCount == 0) {
-            return 35.00 // roughly the average of a single item.
+            return DEFAULT_AVG_PRICE;
         }
         return sumPrices / nonNullItemsCount;
       })();
@@ -164,10 +169,10 @@ function comparePrices(purchaseOptions, mode){
         }*/
 
         let closestStore = purchaseOptions[0];
+        
         const missingItems = findMissingItems(purchaseOptions[0].productPrices);
         closestStore.missingItems = missingItems;
-
-        return ((numItems - missingItems) > COMPLETENESS_THRESHOLD) ? closestStore : {};
+        return ((numItems - missingItems) >= COMPLETENESS_THRESHOLD) ? closestStore : {};
     };
 
 
@@ -175,7 +180,6 @@ function comparePrices(purchaseOptions, mode){
     const bestOneStore = findBestValueStore(purchaseOptions, PENALTY_MULT_1_STORE)
     const bestTwoStores = findBestValueTwoStores();
     const closestStore = findClosestStore();
-
     // Non-empty options will be pushed into results.
     const results = [];
 
@@ -191,6 +195,7 @@ function comparePrices(purchaseOptions, mode){
 
     // If bestOneStore and closestStore are the same object in memory, skip.
     // Will prevent redundant options from being displayed.
+    
     if(!isEmpty(closestStore) && !(bestOneStore === closestStore)) {
         closestStore.storeIds = [closestStore.storeId];
         closestStore.optionType = 'single';
