@@ -20,7 +20,7 @@ import { COLORS } from '../styles/colors';
 
 export const DisplayStoreProductsModal = ({isVisible, onClose, productsToDisplay, missingListFlag}) => {
 
-
+    const theme = useTheme();
 
     const renderItem = ({item}) => {
 
@@ -38,7 +38,7 @@ export const DisplayStoreProductsModal = ({isVisible, onClose, productsToDisplay
           );
     };
 
-    // TODO: make all text centerd, can be done using "jusify-content" for each cell, including header cells.
+
     return (
         <Portal>
             <Modal
@@ -46,7 +46,8 @@ export const DisplayStoreProductsModal = ({isVisible, onClose, productsToDisplay
         onDismiss={() => onClose()}
         contentContainerStyle={styles.modalContainer}
         >
-        <Text variant="titleMedium">Products available for purchase</Text>
+        {!missingListFlag && (<Text variant="titleMedium" style={[theme.headlineMedium, theme.text]}>מוצרים זמינים לרכישה</Text>)}
+        {missingListFlag && (<Text variant="titleMedium" style={[theme.headlineMedium, theme.text]}>מוצרים חסרים</Text>)}
         <ScrollView style={styles.tableContainer}>
       <DataTable>
         {/* Table Header */}

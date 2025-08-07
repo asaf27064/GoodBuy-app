@@ -6,7 +6,7 @@ import  MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunity
 import { COLORS } from '../styles/colors';
 import {Text, useTheme} from 'react-native-paper';
 
-const EditHistoryScreenItem = ({changedProd, changedBy, action, timeStamp}) => {
+const EditHistoryScreenItem = ({changedProd, changedBy, action, timeStamp, difference}) => {
 
 
     const theme = useTheme();
@@ -32,12 +32,16 @@ const EditHistoryScreenItem = ({changedProd, changedBy, action, timeStamp}) => {
     const [bgColor, actionName] = defineActionDependantParams(action);
     const formatedDate =  formatDate(new Date(timeStamp));
 
+
     return (
         <View style={[styles.container, {backgroundColor: bgColor}]}>
             <Image source={{uri: changedProd.image}} style={styles.prodPic}/>
             <View style={styles.editDetails}>
                 <Text style={[theme.headlineMedium, theme.text]}>{changedProd.name.trim()}</Text>
                 <Text style={[theme.text]}>{actionName} ע"י {changedBy} ב-{formatedDate}</Text>
+                {action === "updated" && (
+                    <Text style={[theme.text]}> שינוי כמות: {difference.toString()}</Text>
+                )}
             </View>
         </View>
     );

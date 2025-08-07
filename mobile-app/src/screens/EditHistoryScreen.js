@@ -43,6 +43,7 @@ export default function EditHistoryScreen({ route }) {
         changedBy={item.changedBy}
         action={item.action}
         timeStamp={item.timeStamp}
+        difference={item.difference}
       />
     </View>
   )

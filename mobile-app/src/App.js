@@ -37,6 +37,8 @@ import paperTheme from './theme/paperTheme';
 // Config
 import { API_BASE } from './config';
 
+import { getT } from './utils/translations'
+
 MaterialCommunityIcons.loadFont();
 axios.defaults.baseURL = API_BASE;
 
@@ -109,7 +111,7 @@ function AppDrawer() {
       drawerPosition="right"
       drawerContent={props => (
         <DrawerContentScrollView {...props}>
-          <DrawerItem label="Logout" onPress={() => { logout(); props.navigation.closeDrawer(); }} />
+          <DrawerItem label="התנתקות" onPress={() => { logout(); props.navigation.closeDrawer(); }} />
         </DrawerContentScrollView>
       )}
     >

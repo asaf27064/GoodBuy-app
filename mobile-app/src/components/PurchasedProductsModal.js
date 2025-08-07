@@ -20,7 +20,7 @@ import { COLORS } from '../styles/colors';
 
 export const PurchasedProductsModal = ({isVisible, onClose, productsToDisplay}) => {
 
-    console.log(productsToDisplay);
+    const theme = useTheme();
 
     const renderItem = ({item}) => {
 
@@ -46,7 +46,7 @@ export const PurchasedProductsModal = ({isVisible, onClose, productsToDisplay}) 
         onDismiss={() => onClose()}
         contentContainerStyle={styles.modalContainer}
         >
-        <Text variant="titleMedium">מוצרים שנרכשו:</Text>
+        <Text variant="titleMedium" style={[theme.headlineMedium, theme.text]}>מוצרים שנרכשו:</Text>
         <ScrollView style={styles.tableContainer}>
       <DataTable>
         {/* Table Header */ }
