@@ -51,17 +51,7 @@ const ShoppingHistoryScreenItem = ({title, purchasedProds, timeStamp}) => {
         isVisible={productListModalVisible} 
         onClose={closeProductListModal}  
         productsToDisplay={purchasedProds}></PurchasedProductsModal>
-        {/*<Portal>
-                <Modal
-                    visible={productListModalVisible}
-                    onDismiss={() => closeProductListModal()}
-                    contentContainerStyle={styles.modalContainer}
-                    >
-                    <FlatList
-                    data={purchasedProds}
-                    renderItem={renderItem}/>
-               </Modal>
-    </Portal>*/}
+        
     </>
     );
 }

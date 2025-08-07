@@ -139,16 +139,17 @@ const PriceCompScreenItem = ({type, reason, stores, productPrices, missingItems,
 
     return (
         <Card style={[styles.optionContainer, { backgroundColor: theme.colors.surface }]}>
-            <Card.Content>
-                <Text variant="titleLarge">
+            <Card.Content style={{marginVertical: 10}}>
+                <Text variant="titleLarge" style={[theme.headlineMedium, theme.text]}>
                     רכישה משתלמת ביותר בשתי חנויות:
                 </Text>
-                <Text>מחיר סה"כ: {totalPrice.toFixed(2)}</Text>
+                <Text style={theme.text}>מחיר סה"כ: {totalPrice.toFixed(2)}</Text>
             </Card.Content>
             <Card.Content>
               <View style={styles.storeContainer}>
                                   {/* List1 Button */}
-                                  <TouchableOpacity
+                      <TouchableOpacity
+                      style={{flex:1}}
                         onPress={() => setProductsStore1ModalVisible(true)}
                         >
                         <MaterialCommunityIcons
@@ -157,7 +158,7 @@ const PriceCompScreenItem = ({type, reason, stores, productPrices, missingItems,
                             color={theme.colors.primary}
                         />
                     </TouchableOpacity>
-                  <View>
+                  <View style={{flex: 3}}>
                     <Text style={[theme.text]}>
                       {store1Title}
                     </Text>
@@ -172,7 +173,8 @@ const PriceCompScreenItem = ({type, reason, stores, productPrices, missingItems,
                 </View>
                 <View style={styles.storeContainer}>
                                       {/* List2 Button */}
-                                      <TouchableOpacity
+                    <TouchableOpacity
+                        style={{flex: 1}}
                         onPress={() => setProductsStore2ModalVisible(true)}
                     >
                         <MaterialCommunityIcons
@@ -181,7 +183,7 @@ const PriceCompScreenItem = ({type, reason, stores, productPrices, missingItems,
                             color={theme.colors.primary}
                         />
                     </TouchableOpacity>
-                  <View>
+                  <View style={{flex: 3}}>
                     <Text style={[theme.text]}>
                       {store2Title}
                     </Text>
@@ -222,24 +224,6 @@ const PriceCompScreenItem = ({type, reason, stores, productPrices, missingItems,
     }
 }
 
-/*const styles = StyleSheet.create({
-        optionContainer: {
-            backgroundColor: COLORS.secondaryGray,
-            borderRadius: 10,
-            padding: 10,
-            marginTop: 20
-        },
-
-        buttonsContainer: {
-            padding: 10,
-            marginTop: 5,
-            backgroundColor: 'yellow',
-            justifyContent: 'space-around',
-            flexDirection: 'row'
-        }
-    }
-)*/
-
 const styles = StyleSheet.create({
     optionContainer: {
       borderRadius: 10,
@@ -253,21 +237,14 @@ const styles = StyleSheet.create({
       justifyContent: 'space-around',
       alignItems: 'center',
       padding: 10,
-      borderBottomWidth: 2
+      borderBottomWidth: 1,
+      flex: 1
     },
     buttonsContainer: {
       padding: 10,
       margin: 25,
       justifyContent: 'space-around',
       flexDirection: 'row',
-    },
-
-    listRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingVertical: 6,
-      borderBottomWidth: 1,
-      borderColor: '#ddd',
     },
   });
 
