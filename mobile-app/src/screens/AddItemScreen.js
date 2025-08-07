@@ -45,7 +45,6 @@ export default function AddItemScreen({ route, navigation }) {
   const [loading, setLoading] = useState(false)
   const [categories, setCategories] = useState([])
   const [selectedCategory, setSelectedCategory] = useState(null)
-  const [recentSearches, setRecentSearches] = useState(['חלב', 'לחם', 'ביצים', 'עוף'])
   
   const searchBarRef = useRef(null)
   const fadeAnim = useRef(new Animated.Value(0)).current
@@ -112,20 +111,12 @@ export default function AddItemScreen({ route, navigation }) {
     doSearch(text)
   }
 
-  const handleRecentSearch = (term) => {
-    setQuery(term)
-    doSearch(term)
-  }
 
   const handleCategorySelect = (category) => {
     setSelectedCategory(selectedCategory === category ? null : category)
   }
 
   const handleItemSelect = (item) => {
-    setRecentSearches(prev => {
-      const updated = [query, ...prev.filter(s => s !== query)].slice(0, 4)
-      return updated
-    })
 
     const selectedItem = {
       itemCode: item.itemCode,
@@ -298,27 +289,7 @@ export default function AddItemScreen({ route, navigation }) {
 
         </View>
 
-        {/* Recent Searches */}
-        {!query && (
-          <View style={styles.recentsContainer}>
-            <Text style={[styles.recentsTitle, theme.text, { color: theme.colors.onSurfaceVariant }]}>
-              חיפושים אחרונים
-            </Text>
-            <View style={styles.chipsRow}>
-              {recentSearches.map((term, index) => (
-                <Chip
-                  key={index}
-                  mode="outlined"
-                  onPress={() => handleRecentSearch(term)}
-                  style={[styles.chip, { borderColor: theme.colors.outline }]}
-                  textStyle={{ color: theme.colors.onSurface }}
-                >
-                  {term}
-                </Chip>
-              ))}
-            </View>
-          </View>
-        )}
+
 
         {/* Category Filters */}
         {categories.length > 0 && (

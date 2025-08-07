@@ -30,7 +30,6 @@ exports.getRecs = async (req, res) => {
       .sort({ timeStamp: -1 })
       .limit(historyLimit);
 
-    console.time('recommendation');
     const recsResponse = await RecommendationService.recommend(
       userId,
       list.products,
@@ -38,7 +37,6 @@ exports.getRecs = async (req, res) => {
       topN,
       showAllAI
     );
-    console.timeEnd('recommendation');
 
     const mainRecs = Array.isArray(recsResponse) ? recsResponse : recsResponse.main;
     const supplementaryAI = recsResponse.supplementaryAI || [];
