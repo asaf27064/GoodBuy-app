@@ -1,25 +1,81 @@
-1. Install dependencies from the root folder
+# GoodBuy
 
-npm install
+**GoodBuy** is a full-stack collaborative grocery management platform that helps households shop smarter.  
+It enables shared shopping lists, real-time collaboration, grocery price comparison across Israeli supermarket chains, and AI-powered product recommendations.
 
-2. Copy the environment file to the backend
+The system combines **mobile applications, backend APIs, real-time synchronization, and automated price data ingestion** to help users manage household grocery shopping efficiently.
 
-backend/src/.env
+Built with **Node.js, Express, MongoDB, React Native, and Expo**.
 
-3. Make sure the correct IP is set in mobile-app/src/config.js
+---
 
+# Features
 
-4. Run the project
+### Shared Shopping Lists
+Create and manage shopping lists collaboratively in real time using **Socket.IO**, with live editing indicators showing which users are currently modifying a list.
 
-    i. To run both backend and mobile app together:
+### Price Comparison
+Compare grocery prices across **15+ Israeli supermarket chains** (Shufersal, Mega, Tiv Taam, Yochananof, and others).  
+Supports both single-store shopping and **multi-store price optimization** based on price and product availability.
 
-        npm run dev
+### Smart Recommendations
+Hybrid recommendation engine combining:
 
-    ii. To run only the backend:
+- recency-frequency scoring
+- product co-occurrence analysis
+- collaborative filtering (Jaccard similarity)
+- day-of-week habit detection
+- LLM-powered suggestions via the **Gemini API**
 
-        npm run dev:backend
+### Nearest Store Search
+Locate nearby supermarkets using geospatial distance calculations based on the **Haversine formula**.
 
-    iii. To run only the mobile app:
+### Automated Price Data Pipeline
+A multi-stage pipeline that:
 
-        npm run dev:mobile
+- scrapes retailer pricing data
+- decompresses price files
+- parses XML datasets
+- indexes prices for fast comparison
 
+### Purchase History
+Track past purchases and use them to power recommendations and price insights.
+
+### Cloud-Based Image Storage
+Product images are stored and synchronized using **Cloudflare R2**.
+
+---
+
+# Architecture
+
+The system follows a full-stack architecture composed of three main layers: a mobile client, a backend API, and a data ingestion pipeline.
+
+### Mobile Layer
+**React Native (Expo)** mobile application that allows users to manage shared shopping lists, view price comparisons, and receive recommendations.
+
+### Backend API
+**Node.js / Express** REST API responsible for:
+
+- user authentication and authorization
+- shopping list management
+- recommendation generation
+- product and price queries
+- real-time collaboration via Socket.IO
+
+Data is stored in **MongoDB** using **Mongoose** models.
+
+### Data Ingestion Pipeline
+Automated pipeline that collects and processes supermarket pricing datasets.
+
+Main stages:
+
+1. Scraping retailer data sources  
+2. Decompressing pricing files  
+3. Parsing XML price datasets  
+4. Normalizing product data  
+5. Indexing prices in MongoDB for fast queries
+
+Scheduled jobs run using **node-cron** with concurrency control.
+
+### Real-Time Collaboration
+Shared shopping lists are synchronized across devices using **Socket.IO**, enabling multiple users to edit lists simultaneously.
