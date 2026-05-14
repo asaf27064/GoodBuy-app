@@ -14,6 +14,7 @@ import {
   useTheme
 } from 'react-native-paper'
 import { useAuth } from '../contexts/AuthContext'
+import { useToast } from '../contexts/ToastContext'
 import { useNavigation } from '@react-navigation/native'
 
 export default function RegisterScreen() {
@@ -22,6 +23,7 @@ export default function RegisterScreen() {
 
   const { register } = useAuth()
   const navigation = useNavigation()
+  const { show: toast } = useToast()
 
   const [email, setEmail] = useState('')
   const [username, setUsername] = useState('')
@@ -65,7 +67,7 @@ export default function RegisterScreen() {
         data.errors.forEach(({ param, msg }) => (map[param] = msg))
         setErrors(map)
       } else {
-        Alert.alert('שגיאה', data?.message || 'נסו שוב מאוחר יותר')
+        toast(data?.message || 'נסו שוב מאוחר יותר', { variant: 'error' })
       }
     } finally {
       setLoading(false)

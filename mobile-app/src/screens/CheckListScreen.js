@@ -4,7 +4,6 @@ import {
   SafeAreaView,
   FlatList,
   TouchableOpacity,
-  Alert
 } from 'react-native'
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme, Text } from 'react-native-paper'
@@ -12,12 +11,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import makeGlobalStyles from '../styles/globalStyles'
 import ProductCheckListItem from '../components/CheckListScreenItem'
 import ConfirmPurchaseModal from '../components/ConfirmPurchaseModal'
+import { useToast } from '../contexts/ToastContext'
 import { API_BASE } from '../config'
 
 export default function CheckListScreen({ route, navigation }) {
   const theme = useTheme()
   const styles = makeGlobalStyles(theme)
   const insets = useSafeAreaInsets()
+  const { show: toast } = useToast()
 
     // Remove bottom tab when navigating to this screen.
     useFocusEffect(
@@ -68,11 +69,11 @@ export default function CheckListScreen({ route, navigation }) {
         timestamp:         Date.now(),
         purchasedProducts: items.map(({ product, numUnits }) => ({ product, numUnits }))
       })
-      Alert.alert("", "הרכישה בוצעה בהצלחה. ניתן לראות אותה במסך היסטוריית הרכישות.")
+      toast('הרכישה בוצעה בהצלחה', { variant: 'success' })
       setCheckedSet(new Set())
       navigation.goBack()
     } catch (err) {
-      Alert.alert('Error', err.response?.data?.error || err.message)
+      toast(err.response?.data?.error || err.message || 'הרכישה נכשלה', { variant: 'error' })
     } finally {
       setModalVisible(false)
     }
