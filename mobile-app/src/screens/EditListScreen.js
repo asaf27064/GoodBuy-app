@@ -8,6 +8,7 @@ import EditListScreenItem from '../components/EditListScreenItem'
 import { useAuth } from '../contexts/AuthContext'
 import { useListSocket } from '../contexts/ListSocketContext'
 import { useAddItem } from '../contexts/AddItemContext'
+import { spacing, radius, elevation, typography } from '../theme/tokens'
 import { API_BASE } from '../config'
 axios.defaults.baseURL = API_BASE
 
@@ -127,22 +128,18 @@ export default function EditListScreen({ route, navigation }) {
     if (!hasEditors) return null
     
     return (
-      <View style={{ 
-        position: 'absolute', 
-        top: insets.top + 4, 
-        alignSelf: 'center', 
-        paddingHorizontal: 12, 
-        paddingVertical: 6, 
-        borderRadius: 24, 
-        flexDirection: 'row', 
-        alignItems: 'center', 
+      <View style={{
+        position: 'absolute',
+        top: insets.top + spacing.xs,
+        alignSelf: 'center',
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.xs + 2,
+        borderRadius: radius.pill,
+        flexDirection: 'row',
+        alignItems: 'center',
         backgroundColor: theme.colors.elevation.level2,
         zIndex: 1000,
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        ...elevation.md,
       }}>
         {editors.slice(0, 3).map((name, i) => (
           <Avatar.Text 
@@ -227,18 +224,18 @@ export default function EditListScreen({ route, navigation }) {
         }}
       />
       {saving && (
-        <View style={{ 
-          padding: 8, 
-          backgroundColor: theme.colors.surfaceVariant, 
-          borderTopWidth: 1, 
-          borderColor: theme.colors.outline, 
-          paddingBottom: insets.bottom + 8, 
-          flexDirection: 'row', 
-          alignItems: 'center', 
-          justifyContent: 'center' 
+        <View style={{
+          padding: spacing.sm,
+          backgroundColor: theme.colors.surfaceVariant,
+          borderTopWidth: 1,
+          borderColor: theme.colors.outline,
+          paddingBottom: insets.bottom + spacing.sm,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}>
-          <ActivityIndicator size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />
-          <Text style={{ fontSize: 12, color: theme.colors.onSurfaceVariant }}>Saving...</Text>
+          <ActivityIndicator size={16} color={theme.colors.primary} style={{ marginRight: spacing.sm }} />
+          <Text style={[typography.caption, { color: theme.colors.onSurfaceVariant }]}>שומר...</Text>
         </View>
       )}
     </SafeAreaView>
