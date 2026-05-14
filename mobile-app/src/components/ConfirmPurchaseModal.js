@@ -3,10 +3,12 @@ import { Modal, View, TouchableOpacity, StyleSheet } from 'react-native'
 import { Text, useTheme, Button } from 'react-native-paper'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
 import { spacing, radius, elevation, typography, MIN_HIT_TARGET } from '../theme/tokens'
+import { useT } from '../utils/translations'
 
 // Pop-up modal asking the user to confirm the "finish-purchase" action.
 export default function ConfirmPurchaseModal({ isVisible, onClose, purchasedItems, handlePurchase, allCheckedFlag }) {
   const theme = useTheme()
+  const t = useT()
 
   return (
     <Modal transparent visible={isVisible} animationType="fade" onRequestClose={onClose}>
@@ -44,16 +46,16 @@ export default function ConfirmPurchaseModal({ isVisible, onClose, purchasedItem
                 style={{ marginLeft: spacing.xs }}
               />
               <Text style={[typography.caption, { color: theme.colors.onErrorContainer || theme.colors.error, flex: 1 }]}>
-                נותרו מוצרים ברשימה שטרם סומנו.
+                {t('checkListScreen.confirmPurchaseModal.notAllCheckedText')}
               </Text>
             </View>
           )}
 
           <Text style={[typography.title, { color: theme.colors.onSurface, textAlign: 'center', marginTop: spacing.sm }]}>
-            סיימת עם הקניות?
+            {t('checkListScreen.confirmPurchaseModal.title')}
           </Text>
           <Text style={[typography.caption, { color: theme.colors.onSurfaceVariant, textAlign: 'center', marginTop: spacing.sm, marginBottom: spacing.lg }]}>
-            לחיצה על "אישור" תרוקן את רשימת הקניות ותמחק את היסטוריית העריכה של הרשימה.
+            {t('checkListScreen.confirmPurchaseModal.desciption')}
           </Text>
 
           <View style={styles.actionsRow}>
@@ -63,7 +65,7 @@ export default function ConfirmPurchaseModal({ isVisible, onClose, purchasedItem
               style={[styles.actionBtn, { borderColor: theme.colors.outline }]}
               contentStyle={{ paddingVertical: spacing.xs }}
             >
-              ביטול
+              {t('shared.cancel')}
             </Button>
             <Button
               mode="contained"
@@ -72,7 +74,7 @@ export default function ConfirmPurchaseModal({ isVisible, onClose, purchasedItem
               contentStyle={{ paddingVertical: spacing.xs }}
               buttonColor={theme.colors.primary}
             >
-              אישור
+              {t('shared.confirm')}
             </Button>
           </View>
         </View>

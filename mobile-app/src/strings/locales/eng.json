@@ -3,7 +3,7 @@
         "email": "Email",
         "username": "Username",
         "password": "Password",
-        "example": "e.g",
+        "example": "e.g.",
         "emailExample": "user@example.com",
         "address": "Address",
         "city": "City",
@@ -18,7 +18,7 @@
             "1": "Monday",
             "2": "Tuesday",
             "3": "Wednesday",
-            "4": "Thrusday",
+            "4": "Thursday",
             "5": "Friday",
             "6": "Saturday"
         },
@@ -26,6 +26,152 @@
         "back": "Back",
         "finish": "Finish",
         "logout": "Logout",
-        "confirm": "Confirm"
+        "confirm": "Confirm",
+        "cancel": "Cancel",
+        "error": "Error",
+        "noData": "No data to show yet."
+    },
+    "loginScreen": {
+        "title": "Sign in",
+        "invalidInputText": "Invalid username or password.",
+        "loginButtonText": "Sign in",
+        "goToSignUpText": "Don't have an account? Sign up",
+        "serverError": "Something went wrong. Please try again later."
+    },
+    "registerScreen": {
+        "title": "Sign up",
+        "validUsernameText": "3–20 characters; letters, digits, _ only",
+        "validPasswordText": "At least 8 chars, including upper, lower, digit, special",
+        "invalidEmailErrorText": "Invalid email format",
+        "registerButtonText": "Sign up",
+        "goToLoginText": "Already have an account? Sign in",
+        "successTitle": "Success",
+        "serverError": "Try again later."
+    },
+    "homeScreen": {
+        "title": "Home",
+        "tabNavigatorLabel": "Home",
+        "welcome": "Welcome, <NAME>",
+        "addedToListsHeader": "You were added to lists",
+        "recentChangesHeader": "Recent changes",
+        "addedBy": "Added by <USER>",
+        "changedBy": "Changed by <USER>",
+        "relTime": {
+            "now": "just now",
+            "minutes": "<N> min ago",
+            "hourOne": "1 hour ago",
+            "hours": "<N> hours ago",
+            "yesterday": "yesterday",
+            "days": "<N> days ago"
+        },
+        "getAddressModal": {
+            "title": "Add a new location",
+            "locationNamePlaceholder": "Name (e.g. Home, Work…)",
+            "saveLocationButtonText": "Save location"
+        }
+    },
+    "shoppingListScreen": {
+        "title": "My shopping lists",
+        "tabNavigatorLabel": "Shopping lists",
+        "emptyHeader": "No lists yet",
+        "emptySubtext": "Tap the + button to create your first list.",
+        "leaveConfirmTitle": "Leave list",
+        "leaveConfirmMessage": "Leave the list \"<TITLE>\"?",
+        "leaveAction": "Leave",
+        "leaveFailedToast": "Failed to leave the list",
+        "createFailedToast": "Failed to create the list",
+        "addListModal": {
+            "title": "Create a new list",
+            "listNamePlaceholder": "List name",
+            "addMembersText": "Add members to the list",
+            "searchMembersPlaceholder": "Search username or email",
+            "usersNotFoundText": "No matching users found",
+            "selectedMembersCounterText": "members selected",
+            "createListButtonText": "Create list"
+        },
+        "listMembers": "Members"
+    },
+    "purchaseHistoryScreen": {
+        "title": "Purchase history",
+        "tabNavigatorLabel": "History",
+        "emptyHeader": "Your purchase history is empty",
+        "emptySubtext": "Completed purchases will appear here.",
+        "deletedListFallback": "Deleted list",
+        "purchaseTimeText": "Purchased on ",
+        "purchasedProductsModal": {
+            "title": "Items purchased"
+        }
+    },
+    "editListScreen": {
+        "title": "Edit list",
+        "emptyListPlaceholder": "The list is empty",
+        "savingText": "Saving…",
+        "editingNow": "editing now"
+    },
+    "addItemScreen": {
+        "title": "Add item to list",
+        "itemCode": "SKU",
+        "emptyQueryHeader": "Search products",
+        "emptyQueryText": "Type in the search box and pick from the suggestions.",
+        "productsNotFoundHeader": "No matching products",
+        "productsNotFoundText": "We don't have \"<SEARCHED_PRODUCT>\". Try a different spelling.",
+        "searchBoxPlaceholder": "Enter product name…",
+        "recentSearchesText": "Recent searches"
+    },
+    "recommendationScreen": {
+        "title": "Recommendations",
+        "loadingMessage": "Finding the best suggestions for you…",
+        "lastPurchaseTime": "Last purchased: <LAST_PURCHASE_TIME>",
+        "neverPurchasedText": "Never purchased",
+        "methodLabels": {
+            "methodLabelHabit": "Your usual choice for today",
+            "methodLabelCo": "Goes well with this list",
+            "methodLabelPersonal": "Based on past purchases",
+            "methodLabelCf": "Popular among similar users",
+            "methodLabelAi": "Suggested by the assistant",
+            "methodLabelDefault": "Recommended"
+        },
+        "extraSuggestionsText": "Show more",
+        "addText": "Add",
+        "noRecommendationsHeader": "No recommendations yet",
+        "noRecommendationsText": "Add items to your list and we'll generate personalised picks."
+    },
+    "priceComparisonScreen": {
+        "title": "Price comparison",
+        "page1": {
+            "description": "Pick a starting point for the comparison:",
+            "alert": "Please pick a location from the list.",
+            "currentLocation": "Current location"
+        },
+        "page2": {
+            "description": "Choose your preference:",
+            "alert": "Please pick a preference.",
+            "favorPriceText": "I want the cheapest possible price",
+            "favorCompletenessText": "I want as many items from the list as possible"
+        },
+        "page3": {
+            "noOptionsText": "No competitive stores found. Try a different location.",
+            "bestOneStoreHeader": "Best single-store purchase:",
+            "closestStoreHeader": "Closest option:",
+            "bestTwoStoresHeader": "Best split across two stores:"
+        }
+    },
+    "checkListScreen": {
+        "title": "Check items",
+        "unCheckedProductsHeader": "Product list:",
+        "checkedProductsHeader": "In your cart:",
+        "finishPuchaseButtonText": "Finish purchase",
+        "confirmPurchaseModal": {
+            "title": "Done shopping?",
+            "desciption": "Confirming will clear the list and erase its edit history.",
+            "notAllCheckedText": "Some items are still unchecked."
+        },
+        "confirmPurchaseText": "Purchase complete — see it in History."
+    },
+    "editHistoryScreen": {
+        "title": "Edit history",
+        "addedInfo": "Added by <EDITOR_USER> on ",
+        "updatedInfo": "Updated by <EDITOR_USER> on ",
+        "removedInfo": "Removed by <EDITOR_USER> on "
     }
 }

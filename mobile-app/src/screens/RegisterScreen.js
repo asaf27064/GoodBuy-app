@@ -15,11 +15,13 @@ import {
 } from 'react-native-paper'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
+import { useT } from '../utils/translations'
 import { useNavigation } from '@react-navigation/native'
 
 export default function RegisterScreen() {
   const theme = useTheme()
   const styles = makeStyles(theme)
+  const t = useT()
 
   const { register } = useAuth()
   const navigation = useNavigation()
@@ -42,13 +44,9 @@ export default function RegisterScreen() {
 
   const handleSignUp = async () => {
     const clientErrors = {}
-    if (!isEmailValid(email)) clientErrors.email = 'פורמט אימייל לא תקין'
-    if (!isUsernameValid(username))
-      clientErrors.username =
-        'שם משתמש: 3–20 תווים, אותיות/ספרות/_ בלבד'
-    if (!isPasswordValid(password))
-      clientErrors.password =
-        'סיסמה: מינימום 8 תווים, אות קטנה, גדולה, ספרה ותו מיוחד'
+    if (!isEmailValid(email)) clientErrors.email = t('registerScreen.invalidEmailErrorText')
+    if (!isUsernameValid(username)) clientErrors.username = t('registerScreen.validUsernameText')
+    if (!isPasswordValid(password)) clientErrors.password = t('registerScreen.validPasswordText')
     if (Object.keys(clientErrors).length) {
       setErrors(clientErrors)
       return
@@ -57,8 +55,8 @@ export default function RegisterScreen() {
     setLoading(true)
     try {
       const { message } = await register(email, username, password)
-      Alert.alert('הצלחה', message, [
-        { text: 'אישור', onPress: () => navigation.goBack() }
+      Alert.alert(t('registerScreen.successTitle'), message, [
+        { text: t('shared.confirm'), onPress: () => navigation.goBack() }
       ])
     } catch (e) {
       const data = e.response?.data
@@ -67,7 +65,7 @@ export default function RegisterScreen() {
         data.errors.forEach(({ param, msg }) => (map[param] = msg))
         setErrors(map)
       } else {
-        toast(data?.message || 'נסו שוב מאוחר יותר', { variant: 'error' })
+        toast(data?.message || t('registerScreen.serverError'), { variant: 'error' })
       }
     } finally {
       setLoading(false)
@@ -78,10 +76,10 @@ export default function RegisterScreen() {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.card}>
-          <Text style={styles.title}>הרשמה</Text>
+          <Text style={styles.title}>{t('registerScreen.title')}</Text>
 
           <TextInput
-            label="Email"
+            label={t('shared.email')}
             mode="outlined"
             value={email}
             onChangeText={setEmail}
@@ -92,11 +90,11 @@ export default function RegisterScreen() {
             outlineStyle={{ borderRadius: theme.roundness }}
           />
           <HelperText type={errors.email ? 'error' : 'info'}>
-            {errors.email || 'דוגמה: user@example.com'}
+            {errors.email || `${t('shared.example')}: ${t('shared.emailExample')}`}
           </HelperText>
 
           <TextInput
-            label="Username"
+            label={t('shared.username')}
             mode="outlined"
             value={username}
             onChangeText={setUsername}
@@ -106,11 +104,11 @@ export default function RegisterScreen() {
             outlineStyle={{ borderRadius: theme.roundness }}
           />
           <HelperText type={errors.username ? 'error' : 'info'}>
-            {errors.username || '3–20 תווים, אותיות/ספרות/_ בלבד'}
+            {errors.username || t('registerScreen.validUsernameText')}
           </HelperText>
 
           <TextInput
-            label="Password"
+            label={t('shared.password')}
             mode="outlined"
             value={password}
             onChangeText={setPassword}
@@ -120,8 +118,7 @@ export default function RegisterScreen() {
             outlineStyle={{ borderRadius: theme.roundness }}
           />
           <HelperText type={errors.password ? 'error' : 'info'}>
-            {errors.password ||
-              '8+ תווים, אות קטנה, גדולה, ספרה ותו מיוחד'}
+            {errors.password || t('registerScreen.validPasswordText')}
           </HelperText>
 
           <Button
@@ -135,7 +132,7 @@ export default function RegisterScreen() {
             buttonColor={theme.colors.primary}
             rippleColor="rgba(255,255,255,0.3)"
           >
-            הרשמה
+            {t('registerScreen.registerButtonText')}
           </Button>
 
           <Button
@@ -144,7 +141,7 @@ export default function RegisterScreen() {
             style={styles.link}
             labelStyle={[styles.linkLabel, { color: theme.colors.primary }]}
           >
-            יש לך חשבון? התחבר
+            {t('registerScreen.goToLoginText')}
           </Button>
         </View>
       </ScrollView>

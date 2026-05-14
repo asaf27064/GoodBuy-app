@@ -19,6 +19,7 @@ import HomeScreen from './screens/HomeScreen';
 // Auth
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { I18nProvider, useT } from './utils/translations';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 
@@ -59,6 +60,7 @@ function AnimatedIcon({ name, color, size, focused }) {
 // Bottom tabs
 function MainTabs() {
   const { colors } = useTheme();
+  const t = useT();
   return (
     <Tab.Navigator
       screenOptions={({ navigation, route }) => ({
@@ -96,9 +98,9 @@ function MainTabs() {
         }
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'מסך בית' }} />
-      <Tab.Screen name="ShopList" component={ShoppingListStack} options={{ title: 'רשימות קנייה', headerShown: false }} />
-      <Tab.Screen name="History" component={ShoppingHistoryScreen} options={{ title: 'היסטוריית רכישה' }} />
+      <Tab.Screen name="Home" component={HomeScreen} options={{ title: t('homeScreen.tabNavigatorLabel') }} />
+      <Tab.Screen name="ShopList" component={ShoppingListStack} options={{ title: t('shoppingListScreen.tabNavigatorLabel'), headerShown: false }} />
+      <Tab.Screen name="History" component={ShoppingHistoryScreen} options={{ title: t('purchaseHistoryScreen.tabNavigatorLabel') }} />
     </Tab.Navigator>
   );
 }
@@ -106,13 +108,14 @@ function MainTabs() {
 // Drawer with logout
 function AppDrawer() {
   const { logout } = useAuth();
+  const t = useT();
   return (
     <Drawer.Navigator
       screenOptions={{ headerShown: false }}
       drawerPosition="right"
       drawerContent={props => (
         <DrawerContentScrollView {...props}>
-          <DrawerItem label="התנתקות" onPress={() => { logout(); props.navigation.closeDrawer(); }} />
+          <DrawerItem label={t('shared.logout')} onPress={() => { logout(); props.navigation.closeDrawer(); }} />
         </DrawerContentScrollView>
       )}
     >
@@ -151,13 +154,15 @@ function RootNavigator() {
 export default function App() {
   return (
     <PaperProvider theme={paperTheme}>
-      <AuthProvider>
-        <ToastProvider>
-          <NavigationContainer>
-            <RootNavigator />
-          </NavigationContainer>
-        </ToastProvider>
-      </AuthProvider>
+      <I18nProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <NavigationContainer>
+              <RootNavigator />
+            </NavigationContainer>
+          </ToastProvider>
+        </AuthProvider>
+      </I18nProvider>
     </PaperProvider>
   );
 }

@@ -12,6 +12,7 @@ import makeGlobalStyles from '../styles/globalStyles'
 import ProductCheckListItem from '../components/CheckListScreenItem'
 import ConfirmPurchaseModal from '../components/ConfirmPurchaseModal'
 import { useToast } from '../contexts/ToastContext'
+import { useT } from '../utils/translations'
 import { API_BASE } from '../config'
 
 export default function CheckListScreen({ route, navigation }) {
@@ -19,6 +20,7 @@ export default function CheckListScreen({ route, navigation }) {
   const styles = makeGlobalStyles(theme)
   const insets = useSafeAreaInsets()
   const { show: toast } = useToast()
+  const t = useT()
 
     // Remove bottom tab when navigating to this screen.
     useFocusEffect(
@@ -69,11 +71,11 @@ export default function CheckListScreen({ route, navigation }) {
         timestamp:         Date.now(),
         purchasedProducts: items.map(({ product, numUnits }) => ({ product, numUnits }))
       })
-      toast('הרכישה בוצעה בהצלחה', { variant: 'success' })
+      toast(t('checkListScreen.confirmPurchaseText'), { variant: 'success' })
       setCheckedSet(new Set())
       navigation.goBack()
     } catch (err) {
-      toast(err.response?.data?.error || err.message || 'הרכישה נכשלה', { variant: 'error' })
+      toast(err.response?.data?.error || err.message || t('shared.error'), { variant: 'error' })
     } finally {
       setModalVisible(false)
     }
@@ -97,7 +99,7 @@ export default function CheckListScreen({ route, navigation }) {
         allCheckedFlag={unchecked.length === 0}
       />
 
-      <Text style={[styles.headerText, theme.text, {margin: 10}]}>רשימת מוצרים: </Text>
+      <Text style={[styles.headerText, theme.text, {margin: 10}]}>{t('checkListScreen.unCheckedProductsHeader')}</Text>
       <FlatList
         data={unchecked}
         keyExtractor={(item, idx) => `${item.product.itemCode}-${idx}`}
@@ -106,7 +108,7 @@ export default function CheckListScreen({ route, navigation }) {
 
       {checked.length > 0 && (
         <>
-          <Text style={[styles.headerText, theme.text, {margin: 10}]}>מוצרים בעגלה: </Text>
+          <Text style={[styles.headerText, theme.text, {margin: 10}]}>{t('checkListScreen.checkedProductsHeader')}</Text>
           <FlatList
             data={checked}
             keyExtractor={(item, idx) => `${item.product.itemCode}-${idx}`}
@@ -122,7 +124,7 @@ export default function CheckListScreen({ route, navigation }) {
         ]}
         onPress={() => setModalVisible(true)}
       >
-        <Text style={styles.text}>סיום רכישה</Text>
+        <Text style={styles.text}>{t('checkListScreen.finishPuchaseButtonText')}</Text>
       </TouchableOpacity>
     </SafeAreaView>
   )

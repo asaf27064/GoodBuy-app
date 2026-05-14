@@ -26,39 +26,60 @@
         "back": "חזור",
         "finish": "סיום",
         "logout": "התנתקות",
-        "confirm": "אישור"
-    }
-
-    ,"loginScreen": {
+        "confirm": "אישור",
+        "cancel": "ביטול",
+        "error": "שגיאה",
+        "noData": "אין נתונים להצגה עדיין."
+    },
+    "loginScreen": {
         "title": "התחברות",
         "invalidInputText": "שם המשתמש או הסיסמה שגויים",
-        "loginButtonText":"התחבר",
-        "goToSignUpText":"אין לך חשבון? הרשמה"
+        "loginButtonText": "התחבר",
+        "goToSignUpText": "אין לך חשבון? הרשמה",
+        "serverError": "אירעה שגיאה, נסה שוב מאוחר יותר"
     },
-
     "registerScreen": {
         "title": "הרשמה",
         "validUsernameText": "3-20 תווים, אותיות/ספרות/_ בלבד",
         "validPasswordText": "מינימום 8 תווים, אות קטנה, גדולה, ספרה ותו מיוחד",
-        "invalidEmailErrorText":"פורמט דוא\"ל לא תקין",
+        "invalidEmailErrorText": "פורמט דוא\"ל לא תקין",
         "registerButtonText": "הרשמה",
-        "goToLoginText":"כבר יש לך חשבון? התחבר"
+        "goToLoginText": "כבר יש לך חשבון? התחבר",
+        "successTitle": "הצלחה",
+        "serverError": "נסו שוב מאוחר יותר"
     },
-
     "homeScreen": {
         "title": "מסך בית",
         "tabNavigatorLabel": "מסך בית",
-        "ANYTHING_RELATED_TO_JOIN_LIST_FEATURE_GOES_HERE":"",
+        "welcome": "ברוך הבא, <NAME>",
+        "addedToListsHeader": "הוסיפו אותך לרשימות",
+        "recentChangesHeader": "שינויים אחרונים",
+        "addedBy": "נוספת ע״י <USER>",
+        "changedBy": "שונתה ע״י <USER>",
+        "relTime": {
+            "now": "הרגע",
+            "minutes": "לפני <N> דק׳",
+            "hourOne": "לפני שעה",
+            "hours": "לפני <N> שעות",
+            "yesterday": "אתמול",
+            "days": "לפני <N> ימים"
+        },
         "getAddressModal": {
             "title": "הוספת מיקום חדש",
             "locationNamePlaceholder": "שם (לדוגמה: בית, עבודה...)",
             "saveLocationButtonText": "שמור מיקום"
         }
     },
-
     "shoppingListScreen": {
         "title": "רשימות הקנייה שלי",
         "tabNavigatorLabel": "רשימות קנייה",
+        "emptyHeader": "אין רשימות עדיין",
+        "emptySubtext": "לחצו על הכפתור למטה ליצירת הרשימה הראשונה.",
+        "leaveConfirmTitle": "פרישה מרשימה",
+        "leaveConfirmMessage": "לפרוש מהרשימה \"<TITLE>\"?",
+        "leaveAction": "פרוש",
+        "leaveFailedToast": "הסרה מהרשימה נכשלה",
+        "createFailedToast": "יצירת הרשימה נכשלה",
         "addListModal": {
             "title": "יצירת רשימה חדשה",
             "listNamePlaceholder": "שם רשימה",
@@ -70,57 +91,55 @@
         },
         "listMembers": "חברים ברשימה"
     },
-    
     "purchaseHistoryScreen": {
         "title": "היסטוריית רכישה",
         "tabNavigatorLabel": "היסטוריית רכישה",
+        "emptyHeader": "היסטוריית הרכישה שלך ריקה",
+        "emptySubtext": "ברגע שתסיים רכישה היא תופיע כאן.",
+        "deletedListFallback": "רשימה שנמחקה",
         "purchaseTimeText": "הרכישה בוצעה ב-",
         "purchasedProductsModal": {
             "title": "מוצרים שנרכשו"
         }
     },
-
     "editListScreen": {
         "title": "עריכת רשימה",
         "emptyListPlaceholder": "הרשימה ריקה",
-        "savingText": "שומר שינויים..."
+        "savingText": "שומר...",
+        "editingNow": "עורכים כרגע"
     },
-
     "addItemScreen": {
         "title": "הוספת מוצר לרישמה",
         "itemCode": "מק\"ט",
         "emptyQueryHeader": "חיפוש מוצרים",
         "emptyQueryText": "הקלידו בתיבת החיפוש ובחרו מבין האפשרויות",
         "productsNotFoundHeader": "לא נמצאו מוצרים מתאימים",
-        "productsNotFoundText": "אין לנו <SEARCHED_PRODUCT> במאגר. נסו איות שונה.",
+        "productsNotFoundText": "אין לנו \"<SEARCHED_PRODUCT>\" במאגר. נסו איות שונה.",
         "searchBoxPlaceholder": "הזן שם מוצר...",
         "recentSearchesText": "חיפושים אחרונים"
     },
-
     "recommendationScreen": {
-        "title":"המלצות",
+        "title": "המלצות",
         "loadingMessage": "מוצא את ההצעות הטובות ביותר...",
-        "lastPurchaseTime": ":רכישה אחרונה בתאריך <LAST_PURCHASE_TIME>",
+        "lastPurchaseTime": "רכישה אחרונה: <LAST_PURCHASE_TIME>",
         "neverPurchasedText": "לא נרכש מעולם",
         "methodLabels": {
-            "methodLabelHabit":"בדרך כלל נרכש ביום",
-            "methodLabelCo":"משתלב טוב ברשימה",
-            "methodLabelPersonal":"לפי רכישות קודמות",
-            "methodLabelCf":"פופולארי בקרב משתמשים אחרים",
-            "methodLabelAi":"הצעת המערכת",
+            "methodLabelHabit": "בדרך כלל נרכש ביום",
+            "methodLabelCo": "משתלב טוב ברשימה",
+            "methodLabelPersonal": "לפי רכישות קודמות",
+            "methodLabelCf": "פופולארי בקרב משתמשים אחרים",
+            "methodLabelAi": "הצעת המערכת",
             "methodLabelDefault": "מומלץ"
         },
         "extraSuggestionsText": "הצג עוד",
         "addText": "הוספה",
         "noRecommendationsHeader": "עוד לא מצאנו הצעות שמתאימות לך",
         "noRecommendationsText": "הוספת פריטים לרשימה תאפשר לנו לתת המלצות מותאמות אישית"
-
     },
-
     "priceComparisonScreen": {
         "title": "השוואת מחירים",
         "page1": {
-            "description": ":בחרו נקודת מוצא לחישוב השוואת המחירים",
+            "description": "בחרו נקודת מוצא לחישוב השוואת המחירים:",
             "alert": "נא לבחור מיקום מתוך הרשימה.",
             "currentLocation": "מיקום נוכחי"
         },
@@ -137,7 +156,6 @@
             "bestTwoStoresHeader": "רכישה משתלמת ביותר בשתי חנויות:"
         }
     },
-
     "checkListScreen": {
         "title": "סימון מוצרים",
         "unCheckedProductsHeader": "רשימת מוצרים:",
@@ -149,8 +167,7 @@
             "notAllCheckedText": "נותרו מוצרים ברשימה שטרם סומנו."
         },
         "confirmPurchaseText": "הרכישה בוצעה בהצלחה. ניתן לראות אותה במסך היסטוריית הרכישות."
-    }, 
-
+    },
     "editHistoryScreen": {
         "title": "היסטוריית עריכה",
         "addedInfo": "הוסף ע\"י <EDITOR_USER> ב-",
