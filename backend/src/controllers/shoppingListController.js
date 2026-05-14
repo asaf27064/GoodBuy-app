@@ -89,37 +89,76 @@ exports.updateListProducts = async (req, res) => {
     const uid = (req.user.sub || req.user._id).toString()
     const listId = req.params.id
     const { changes = [] } = req.body
+    if (!Array.isArray(changes)) {
+      return res.status(400).json({ error: 'changes must be an array' })
+    }
+
     const list = await ShoppingList.findById(listId)
     if (!list) return res.status(404).json({ error: 'List not found' })
-    if (!list.members.map(id => id.toString()).includes(uid)) return res.status(403).json({ error: 'Not permitted' })
+    if (!list.members.map(id => id.toString()).includes(uid)) {
+      return res.status(403).json({ error: 'Not permitted' })
+    }
+
+    // Collapse N serial updateOne calls into a single bulkWrite round-trip.
+    // ordered: true preserves the client's chronological intent (e.g. add-then-
+    // remove of the same item still applies in that order). The editLog push
+    // rides along as the final op so the whole save is atomic on the wire.
+    const ops = []
+    const ackOps = []  // ackOps[i] = ackId of the i-th change that produced an op
     for (const c of changes) {
-      try {
-        if (c.action === 'added') {
-          await ShoppingList.updateOne(
-            { _id: listId, 'products.product.itemCode': { $ne: c.product.itemCode } },
-            { $push: { products: { product: c.product, numUnits: 1 } } }
-          )
-        }
-        if (c.action === 'removed') {
-          await ShoppingList.updateOne(
-            { _id: listId },
-            { $pull: { products: { 'product.itemCode': c.product.itemCode } } }
-          )
-        }
-        if (c.action === 'updated') {
-          await ShoppingList.updateOne(
-            { _id: listId, 'products.product.itemCode': c.product.itemCode },
-            { $inc: { 'products.$.numUnits': c.difference } }
-          )
-        }
-        if (c.ackId) global.io.to(`user:${uid}`).emit('listAck', { ackId: c.ackId, status: 'ok' })
-      } catch (err) {
-        if (c.ackId) global.io.to(`user:${uid}`).emit('listAck', { ackId: c.ackId, status: 'error' })
+      if (!c || !c.product?.itemCode) continue
+      if (c.action === 'added') {
+        ops.push({
+          updateOne: {
+            filter: { _id: listId, 'products.product.itemCode': { $ne: c.product.itemCode } },
+            update: { $push: { products: { product: c.product, numUnits: 1 } } }
+          }
+        })
+        ackOps.push(c.ackId)
+      } else if (c.action === 'removed') {
+        ops.push({
+          updateOne: {
+            filter: { _id: listId },
+            update: { $pull: { products: { 'product.itemCode': c.product.itemCode } } }
+          }
+        })
+        ackOps.push(c.ackId)
+      } else if (c.action === 'updated') {
+        ops.push({
+          updateOne: {
+            filter: { _id: listId, 'products.product.itemCode': c.product.itemCode },
+            update: { $inc: { 'products.$.numUnits': c.difference } }
+          }
+        })
+        ackOps.push(c.ackId)
       }
     }
-    if (changes.length) {
-      await ShoppingList.updateOne({ _id: listId }, { $push: { editLog: { $each: changes } } })
+
+    let bulkOk = true
+    if (ops.length) {
+      ops.push({
+        updateOne: {
+          filter: { _id: listId },
+          update: { $push: { editLog: { $each: changes } } }
+        }
+      })
+      try {
+        await ShoppingList.bulkWrite(ops, { ordered: true })
+      } catch (err) {
+        bulkOk = false
+        console.error('updateListProducts bulkWrite error:', err)
+      }
     }
+
+    // Acks: 'ok' if the whole bulk succeeded, 'error' otherwise. We don't try to
+    // map individual writeErrors back to ackIds — the mobile client rolls back
+    // from its pre-change snapshot when it sees an error, which is the right
+    // behaviour whether one op or many failed.
+    const ackStatus = bulkOk ? 'ok' : 'error'
+    for (const ackId of ackOps) {
+      if (ackId) global.io.to(`user:${uid}`).emit('listAck', { ackId, status: ackStatus })
+    }
+
     const updated = await ShoppingList.findById(listId)
     global.io.to(`list:${listId}`).emit('listUpdated', updated)
     return res.json({ message: 'ok', list: updated })
