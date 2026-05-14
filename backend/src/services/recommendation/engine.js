@@ -1,4 +1,10 @@
 const PurchaseModel = require('../../models/purchaseModel');
+const { getOrLoad } = require('./cache');
+
+// Global popularity is the heaviest query in the recommendation hot path
+// ($unwind aggregation over all purchases). It changes slowly, so a 60s
+// TTL collapses request bursts to one DB hit without visible staleness.
+const POPULARITY_TTL_MS = 60_000;
 
 // RF + lastTimes
 function calcRF(history, nowMs, C) {
@@ -104,14 +110,16 @@ async function calcCF(history, userId, currentCodes, C) {
   return Object.entries(scores).map(([code, score]) => ({ code, score, method: 'cf' }));
 }
 
-// Popularity counts
+// Popularity counts (cached — see POPULARITY_TTL_MS above)
 async function getGlobalPopularity(/* C */) {
-  const agg = await PurchaseModel.aggregate([
-    { $unwind: '$products' },
-    { $group: { _id: '$products.product.itemCode', count: { $sum: 1 } } }
-  ]);
-  const maxCount = Math.max(...agg.map(g => g.count), 1);
-  return { counts: Object.fromEntries(agg.map(g => [g._id, g.count])), maxCount };
+  return getOrLoad('globalPopularity', POPULARITY_TTL_MS, async () => {
+    const agg = await PurchaseModel.aggregate([
+      { $unwind: '$products' },
+      { $group: { _id: '$products.product.itemCode', count: { $sum: 1 } } }
+    ]);
+    const maxCount = Math.max(...agg.map(g => g.count), 1);
+    return { counts: Object.fromEntries(agg.map(g => [g._id, g.count])), maxCount };
+  });
 }
 
 // Popularity boost

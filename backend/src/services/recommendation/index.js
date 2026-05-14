@@ -5,6 +5,12 @@ const {
   ensureMethodAvailability, guaranteeMethodDiversity
 } = require('./engine');
 const { getAISuggestions } = require('./ai');
+const { getOrLoad } = require('./cache');
+
+// 60 seconds: long enough to absorb request bursts, short enough that a
+// freshly scraped catalog or freshly recorded purchase shows up within a
+// minute for the next caller.
+const CATALOG_TTL_MS = 60_000;
 
 const C = {
   MIN_HABITS: 2,
@@ -24,28 +30,32 @@ function validateInputs(userId, currentProducts, purchaseHistory, topN) {
   if (!Number.isInteger(topN) || topN < 1) throw new Error('topN must be a positive integer');
 }
 
+// Cached. The returned Maps/object are shared across concurrent callers — all
+// downstream readers (`ai.js`, `recommend(...)`) are read-only on these.
 async function loadCatalog() {
-  const all = await ProductModel.find().lean();
-  const nameToCode = new Map();
-  const canonicalToCodes = new Map();
-  const codeToName = {};
-  all.forEach(p => {
-    const id = String(p._id);
-    const name = (p.name || '').trim();
-    if (!name || !id) return;
-    const n = name.toLowerCase().replace(/\s+/g, ' ').replace(/[״"]/g, '');
-    const c = n
-      .replace(/\d+([.,]\d+)?/g, '')
-      .replace(/[()\-+*/.,:;'"!?]/g, ' ')
-      .replace(/\s+/g, ' ').trim();
-    nameToCode.set(n, id);
-    if (c) {
-      if (!canonicalToCodes.has(c)) canonicalToCodes.set(c, []);
-      canonicalToCodes.get(c).push(id);
-    }
-    codeToName[id] = name;
+  return getOrLoad('catalog', CATALOG_TTL_MS, async () => {
+    const all = await ProductModel.find().lean();
+    const nameToCode = new Map();
+    const canonicalToCodes = new Map();
+    const codeToName = {};
+    all.forEach(p => {
+      const id = String(p._id);
+      const name = (p.name || '').trim();
+      if (!name || !id) return;
+      const n = name.toLowerCase().replace(/\s+/g, ' ').replace(/[״"]/g, '');
+      const c = n
+        .replace(/\d+([.,]\d+)?/g, '')
+        .replace(/[()\-+*/.,:;'"!?]/g, ' ')
+        .replace(/\s+/g, ' ').trim();
+      nameToCode.set(n, id);
+      if (c) {
+        if (!canonicalToCodes.has(c)) canonicalToCodes.set(c, []);
+        canonicalToCodes.get(c).push(id);
+      }
+      codeToName[id] = name;
+    });
+    return { nameToCode, canonicalToCodes, codeToName };
   });
-  return { nameToCode, canonicalToCodes, codeToName };
 }
 
 module.exports = {
