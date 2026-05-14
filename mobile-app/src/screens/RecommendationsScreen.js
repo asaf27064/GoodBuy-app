@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { SafeAreaView, FlatList, View, StyleSheet } from 'react-native';
+import { SafeAreaView, FlatList, View, StyleSheet, RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native'
 import {
   useTheme,
@@ -16,6 +16,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { LoadingIndicator } from '../components/LoadingIndicator';
+import { SkeletonList } from '../components/Skeleton';
+import { spacing, radius, typography } from '../theme/tokens';
 
 export default function RecommendationsScreen({ route, navigation }) {
   const theme = useTheme();
@@ -45,65 +47,44 @@ export default function RecommendationsScreen({ route, navigation }) {
   const [supplementaryOther, setSupplementaryOther] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showingExtra, setShowingExtra] = useState(false);
 
-  const fetchRecommendations = async (showAllAI = false) => {
-    try {
-      const { data } = await axios.get(
-        `/api/Recommendations?listId=${listObj._id}&showAllAI=${showAllAI}`
-      );
-      
-      if (Array.isArray(data)) {
-        setMainRecs(data);
-        setSupplementaryAI([]);
-        setSupplementaryOther([]);
-        setStats({});
-      } else {
-        setMainRecs(data.main || []);
-        
-        // Separate AI and non-AI supplementary items
-        const aiItems = (data.supplementaryAI || []).filter(item => item.method === 'ai');
-        const otherItems = (data.supplementaryAI || []).filter(item => item.method !== 'ai');
-        
-        setSupplementaryAI(aiItems);
-        setSupplementaryOther(otherItems);
-        setStats(data.stats || {});
-      }
-    } catch (err) {
-      console.error(err);
+  const loadRecs = useCallback(async () => {
+    const { data } = await axios.get(
+      `/api/Recommendations?listId=${listObj._id}&showAllAI=true`
+    );
+    if (Array.isArray(data)) {
+      setMainRecs(data);
+      setSupplementaryAI([]);
+      setSupplementaryOther([]);
+      setStats({});
+    } else {
+      setMainRecs(data.main || []);
+      const aiItems    = (data.supplementaryAI || []).filter(i => i.method === 'ai');
+      const otherItems = (data.supplementaryAI || []).filter(i => i.method !== 'ai');
+      setSupplementaryAI(aiItems);
+      setSupplementaryOther(otherItems);
+      setStats(data.stats || {});
     }
+  }, [listObj._id]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try { await loadRecs(); } catch (err) { console.error(err); }
+    finally { setRefreshing(false); }
   };
 
   useEffect(() => {
     let active = true;
     setLoading(true);
     (async () => {
-      try {
-        const { data } = await axios.get(
-          `/api/Recommendations?listId=${listObj._id}&showAllAI=true`
-        );
-        if (!active) return;
-        if (Array.isArray(data)) {
-          setMainRecs(data);
-          setSupplementaryAI([]);
-          setSupplementaryOther([]);
-          setStats({});
-        } else {
-          setMainRecs(data.main || []);
-          const aiItems    = (data.supplementaryAI || []).filter(i => i.method === 'ai');
-          const otherItems = (data.supplementaryAI || []).filter(i => i.method !== 'ai');
-          setSupplementaryAI(aiItems);
-          setSupplementaryOther(otherItems);
-          setStats(data.stats || {});
-        }
-      } catch (err) {
-        if (active) console.error(err);
-      } finally {
-        if (active) setLoading(false);
-      }
+      try { await loadRecs(); }
+      catch (err) { if (active) console.error(err); }
+      finally { if (active) setLoading(false); }
     })();
     return () => { active = false };
-  }, [listObj._id]);
+  }, [loadRecs]);
 
   const handleToggleExtra = () => {
     setShowingExtra(!showingExtra);
@@ -272,14 +253,15 @@ export default function RecommendationsScreen({ route, navigation }) {
   ];
 
   if (loading) {
-    return (/*
-      <View style={styles.loader}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={[styles.loadingText, { color: theme.colors.onSurfaceVariant }]}>
-          מוצא את ההצעות הטובות ביותר...
-        </Text>
-      </View>*/
-      <LoadingIndicator loadingMessage={"מוצא את ההצעות הטובות ביותר..."}/>
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={{ paddingTop: spacing.lg, paddingHorizontal: spacing.lg }}>
+          <Text style={[typography.body, { color: theme.colors.onSurfaceVariant, marginBottom: spacing.md, textAlign: 'center' }]}>
+            מוצא את ההצעות הטובות ביותר...
+          </Text>
+          <SkeletonList count={4} variant="row" />
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -290,6 +272,14 @@ export default function RecommendationsScreen({ route, navigation }) {
         keyExtractor={item => `${item.itemCode}-${item.isSupplementary ? 'supp' : 'main'}`}
         renderItem={renderItem}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 60 }]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
+          />
+        }
         ListHeaderComponent={() => (
           <View style={styles.header}>
             {/* Compact Stats */}

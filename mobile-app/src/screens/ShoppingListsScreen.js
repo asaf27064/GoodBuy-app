@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
-import { View, FlatList, SafeAreaView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native'
+import { View, FlatList, SafeAreaView, TouchableOpacity, RefreshControl, Alert, Text } from 'react-native'
 import { useTheme } from 'react-native-paper'
 import { useFocusEffect } from '@react-navigation/native'
 import makeGlobalStyles from '../styles/globalStyles'
@@ -9,6 +9,8 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import ShoppingListScreenItem from '../components/ShoppingListScreenItem'
 import AddListModal from '../components/AddListModal'
 import PriceSyncBanner from '../components/PriceSyncBanner'
+import { SkeletonList } from '../components/Skeleton'
+import { spacing, radius, elevation, typography } from '../theme/tokens'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import CheckListScreen from './CheckListScreen'
 import EditListScreen from './EditListScreen'
@@ -74,6 +76,7 @@ export default function ShoppingListScreen({ navigation, route }) {
   const [isModalVisible, setModalVisible] = useState(false);
   const [shoppingLists, setShoppingLists] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const { on, off } = useListSocket();
   const { user } = useAuth();
 
@@ -100,6 +103,12 @@ export default function ShoppingListScreen({ navigation, route }) {
     } catch {}
     finally { setLoading(false) }
   }
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try { await fetchShoppingLists(); }
+    finally { setRefreshing(false); }
+  };
 
   // Leave list
   const leaveList = async (listId) => {
@@ -211,11 +220,29 @@ export default function ShoppingListScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+      <SafeAreaView style={styles.container}>
+        <View style={{ paddingTop: spacing.sm }}>
+          <SkeletonList count={4} variant="card" />
+        </View>
       </SafeAreaView>
     )
   }
+
+  const EmptyState = () => (
+    <View style={{ alignItems: 'center', paddingHorizontal: spacing.xl, paddingTop: spacing.xxxl }}>
+      <MaterialCommunityIcons
+        name="cart-outline"
+        size={64}
+        color={theme.colors.onSurfaceDisabled}
+      />
+      <Text style={[typography.title, { color: theme.colors.onSurface, marginTop: spacing.lg, textAlign: 'center' }]}>
+        אין רשימות עדיין
+      </Text>
+      <Text style={[typography.body, { color: theme.colors.onSurfaceVariant, marginTop: spacing.sm, textAlign: 'center' }]}>
+        לחצו על הכפתור למטה ליצירת הרשימה הראשונה.
+      </Text>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -226,15 +253,45 @@ export default function ShoppingListScreen({ navigation, route }) {
           data={shoppingLists}
           keyExtractor={i => i._id}
           renderItem={renderItem}
-          contentContainerStyle={{ paddingVertical: 8, paddingBottom: insets.bottom + 120 }}
+          contentContainerStyle={{
+            paddingVertical: spacing.sm,
+            paddingBottom: insets.bottom + 120,
+            flexGrow: 1,
+          }}
+          ListEmptyComponent={EmptyState}
           showsVerticalScrollIndicator
           style={{ flex: 1 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={theme.colors.primary}
+              colors={[theme.colors.primary]}
+            />
+          }
         />
       </View>
       <TouchableOpacity
         onPress={addList}
-        style={[{ position: 'absolute', right: 20, padding: 16, borderWidth: 2, borderRadius: 20, alignItems: 'center', justifyContent: 'center', zIndex: 100, elevation: 12 }, { bottom: insets.bottom + 80, backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }]}
-        underlayColor={theme.colors.surface}
+        style={[
+          {
+            position: 'absolute',
+            right: spacing.xl,
+            padding: spacing.lg,
+            borderWidth: 2,
+            borderRadius: radius.xl,
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+          },
+          elevation.xl,
+          {
+            bottom: insets.bottom + 80,
+            backgroundColor: theme.colors.primary,
+            borderColor: theme.colors.primary,
+          },
+        ]}
+        activeOpacity={0.85}
       >
         <MaterialCommunityIcons name="plus" color={theme.colors.onPrimary} size={28} />
       </TouchableOpacity>

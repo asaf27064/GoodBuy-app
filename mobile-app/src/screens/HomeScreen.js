@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useCallback} from 'react';
-import { SafeAreaView, View, TouchableOpacity } from 'react-native';
+import { SafeAreaView, View, TouchableOpacity, RefreshControl, ScrollView } from 'react-native';
 import { Snackbar, useTheme, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import axios from 'axios';
@@ -12,6 +12,7 @@ import GetAddressModal from '../components/GetAddressModal';
 import { API_BASE } from '../config';
 import { useAuth } from '../contexts/AuthContext'
 import { useFocusEffect } from '@react-navigation/native';
+import { spacing, radius, elevation, typography } from '../theme/tokens';
 
 import { FlatList } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -50,6 +51,7 @@ export default function HomeScreen() {
   const [mostRecentChange, setMostRecentChange] = useState(null);
   const [recentChanges, setRecentChanges] = useState([]);
   const [addedTo, setAddedTo] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [isModalVisible, setModalVisible] = useState(false);
   const addLocation = () => setModalVisible(true);
@@ -135,6 +137,12 @@ export default function HomeScreen() {
     fetchListsForHome();
   }, [fetchListsForHome]));
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try { await fetchListsForHome(); }
+    finally { setRefreshing(false); }
+  };
+
   const renderRecentRow = (item, index, arrLen) => (
     <TouchableRipple
       onPress={() =>
@@ -179,15 +187,21 @@ export default function HomeScreen() {
     <Surface
       elevation={2}
       style={{
-        marginHorizontal: 12,
-        marginTop: 12,
-        borderRadius: 16,
-        backgroundColor: theme.colors.surface
+        marginHorizontal: spacing.md,
+        marginTop: spacing.md,
+        borderRadius: radius.lg,
+        backgroundColor: theme.colors.surface,
       }}
     >
-      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 }}>
-        <MaterialCommunityIcons name={icon} size={18} color={theme.colors.primary} style={{ marginLeft: 8 }} />
-        <Text style={{ color: theme.colors.onSurface, fontSize: 16, fontWeight: '700', textAlign: 'right' }}>{title}</Text>
+      <View style={{
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        paddingHorizontal: spacing.lg,
+        paddingTop: spacing.md,
+        paddingBottom: spacing.sm,
+      }}>
+        <MaterialCommunityIcons name={icon} size={18} color={theme.colors.primary} style={{ marginLeft: spacing.sm }} />
+        <Text style={[typography.subtitle, { color: theme.colors.onSurface, textAlign: 'right' }]}>{title}</Text>
       </View>
       <Divider />
       {children}
@@ -196,99 +210,130 @@ export default function HomeScreen() {
 
   const displayName = user?.username || user?.email || '';
 
+  const EmptyFeedText = () => (
+    <Text
+      style={{
+        color: theme.colors.onSurfaceVariant,
+        textAlign: 'center',
+        paddingVertical: spacing.md,
+      }}
+    >
+      אין נתונים להצגה עדיין.
+    </Text>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <GetAddressModal isVisible={isModalVisible} onClose={closeModal} fetchLocation={getCoordinatesFromAddress}/>
 
-      {/* Greeting block */}
-<Surface
-  elevation={2}
-  style={{
-    marginHorizontal: 12,
-    marginTop: 8,
-    borderRadius: 16,
-    backgroundColor: welcomeBg,
-    borderWidth: 1,
-    borderColor: welcomeBorder
-  }}
->
-  <View
-    style={{
-      width: '100%',
-      paddingHorizontal: 16,
-      paddingVertical: 16,
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }}
-  >
-    <MaterialCommunityIcons
-      name="hand-wave-outline"
-      size={20}
-      color={welcomeFg}
-      style={{ marginLeft: 8 }}
-    />
-    <Text
-      style={{
-        color: welcomeFg,
-        fontSize: 20,
-        fontWeight: '800',
-        textAlign: 'center',
-        includeFontPadding: false
-      }}
-    >
-      {`ברוך הבא, ${displayName}`}
-    </Text>
-  </View>
-</Surface>
-
-
-
-      <Section icon="account-plus-outline" title="הוסיפו אותך לרשימות">
-        <FlatList
-          data={addedTo}
-          keyExtractor={(i, idx) => (i.listId || '') + '_add_' + idx}
-          renderItem={({ item, index }) => (
-            <>
-              {renderAddedRow(item, index, addedTo.length)}
-              {index < addedTo.length - 1 ? <Divider style={{ marginHorizontal: 12 }} /> : null}
-            </>
-          )}
-          ListEmptyComponent={
-            <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: 'center', paddingVertical: 12 }}>
-              אין נתונים להצגה עדיין.
-            </Text>
-          }
-        />
-      </Section>
-
-      <Section icon="history" title="שינויים אחרונים">
-        <FlatList
-          data={recentChanges}
-          keyExtractor={(i, idx) => (i.listId || '') + '_chg_' + idx}
-          renderItem={({ item, index }) => (
-            <>
-              {renderRecentRow(item, index, recentChanges.length)}
-              {index < recentChanges.length - 1 ? <Divider style={{ marginHorizontal: 12 }} /> : null}
-            </>
-          )}
-          ListEmptyComponent={
-            <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: 'center', paddingVertical: 12 }}>
-              אין נתונים להצגה עדיין.
-            </Text>
-          }
-          contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
-        />
-      </Section>
-
-      <TouchableOpacity onPress={addLocation}
-          style={[{ position: 'absolute', right: 20, padding: 16, borderWidth: 2, borderRadius: 20, alignItems: 'center', justifyContent: 'center', zIndex: 100, elevation: 12 }, { bottom: insets.bottom + 80, backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }]}
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
+          />
+        }
+      >
+        {/* Greeting block */}
+        <Surface
+          elevation={2}
+          style={{
+            marginHorizontal: spacing.md,
+            marginTop: spacing.sm,
+            borderRadius: radius.lg,
+            backgroundColor: welcomeBg,
+            borderWidth: 1,
+            borderColor: welcomeBorder,
+          }}
         >
-        <MaterialCommunityIcons 
-                    name="map-marker-plus" 
-                    size={20} 
-                    color={theme.colors.onPrimary} 
-                  />
+          <View
+            style={{
+              width: '100%',
+              paddingHorizontal: spacing.lg,
+              paddingVertical: spacing.lg,
+              flexDirection: 'row-reverse',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <MaterialCommunityIcons
+              name="hand-wave-outline"
+              size={20}
+              color={welcomeFg}
+              style={{ marginLeft: spacing.sm }}
+            />
+            <Text
+              style={[
+                typography.headline,
+                {
+                  color: welcomeFg,
+                  textAlign: 'center',
+                  includeFontPadding: false,
+                },
+              ]}
+            >
+              {`ברוך הבא, ${displayName}`}
+            </Text>
+          </View>
+        </Surface>
+
+        <Section icon="account-plus-outline" title="הוסיפו אותך לרשימות">
+          {addedTo.length === 0 ? (
+            <EmptyFeedText />
+          ) : (
+            addedTo.map((item, index) => (
+              <View key={(item.listId || '') + '_add_' + index}>
+                {renderAddedRow(item, index, addedTo.length)}
+                {index < addedTo.length - 1 ? <Divider style={{ marginHorizontal: spacing.md }} /> : null}
+              </View>
+            ))
+          )}
+        </Section>
+
+        <Section icon="history" title="שינויים אחרונים">
+          {recentChanges.length === 0 ? (
+            <EmptyFeedText />
+          ) : (
+            recentChanges.map((item, index) => (
+              <View key={(item.listId || '') + '_chg_' + index}>
+                {renderRecentRow(item, index, recentChanges.length)}
+                {index < recentChanges.length - 1 ? <Divider style={{ marginHorizontal: spacing.md }} /> : null}
+              </View>
+            ))
+          )}
+        </Section>
+      </ScrollView>
+
+      <TouchableOpacity
+        onPress={addLocation}
+        style={[
+          {
+            position: 'absolute',
+            right: spacing.xl,
+            padding: spacing.lg,
+            borderWidth: 2,
+            borderRadius: radius.xl,
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+          },
+          elevation.xl,
+          {
+            bottom: insets.bottom + 80,
+            backgroundColor: theme.colors.primary,
+            borderColor: theme.colors.primary,
+          },
+        ]}
+        activeOpacity={0.85}
+      >
+        <MaterialCommunityIcons
+          name="map-marker-plus"
+          size={20}
+          color={theme.colors.onPrimary}
+        />
       </TouchableOpacity>
     </SafeAreaView>
   );
