@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { Card, Text, Paragraph, useTheme } from 'react-native-paper';
+import { Card, Text, useTheme } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-
+import { spacing, radius, elevation, typography, MIN_HIT_TARGET } from '../theme/tokens';
 
 // An item in the shopping list screen.
 // Contains the list's name and usernames of the members of the list, as well as
@@ -16,63 +16,82 @@ export default function ShoppingListScreenItem({ listObj, navigation }) {
     .filter(Boolean)
     .join(', ');
 
-  const goToEditList = () =>
-    navigation.navigate('EditItems', { listObj })
-  const goToCheckList = () =>
-    navigation.navigate('CheckItems', { listObj })
-  const goToEditHistory = () =>
-    navigation.navigate('EditHistory', { listObj })
-  const goToSuggestions = () =>
-    navigation.navigate('Recommend', { listObj })
-  const goToPriceComparison = () =>
-    navigation.navigate('Compare', { listObj })
+  const goToEditList = () => navigation.navigate('EditItems', { listObj })
+  const goToCheckList = () => navigation.navigate('CheckItems', { listObj })
+  const goToEditHistory = () => navigation.navigate('EditHistory', { listObj })
+  const goToSuggestions = () => navigation.navigate('Recommend', { listObj })
+  const goToPriceComparison = () => navigation.navigate('Compare', { listObj })
 
   return (
-    <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+    <Card style={[styles.card, { backgroundColor: theme.colors.surface }, elevation.md]}>
       <Card.Content>
-        <Text style={[theme.text, theme.headlineMedium, { color: theme.colors.onSurface }]}>{title}</Text>
-        <Text style={[theme.text, theme.mutedText, {marginVertical: 5}]}>
+        <Text
+          style={[
+            typography.title,
+            { color: theme.colors.onSurface, textAlign: 'right' },
+          ]}
+          numberOfLines={1}
+        >
+          {title}
+        </Text>
+        <Text
+          style={[
+            typography.caption,
+            {
+              color: theme.colors.onSurfaceVariant,
+              marginTop: spacing.xs,
+              textAlign: 'right',
+            },
+          ]}
+          numberOfLines={1}
+        >
           חברים ברשימה: {memberLabels || '—'}
         </Text>
       </Card.Content>
 
       <Card.Actions style={styles.actions}>
-        <ActionButton icon="playlist-edit" onPress={goToEditList} />
-        <ActionButton icon="lightbulb-on-outline" onPress={goToSuggestions} />
-        <ActionButton icon="scale-balance" onPress={goToPriceComparison} />
-        <ActionButton icon="checkbox-marked-circle-outline" onPress={goToCheckList} />
-        <ActionButton icon="history" onPress={goToEditHistory} />
+        <ActionButton icon="playlist-edit" onPress={goToEditList} accessibilityLabel="Edit list" />
+        <ActionButton icon="lightbulb-on-outline" onPress={goToSuggestions} accessibilityLabel="Recommendations" />
+        <ActionButton icon="scale-balance" onPress={goToPriceComparison} accessibilityLabel="Compare prices" />
+        <ActionButton icon="checkbox-marked-circle-outline" onPress={goToCheckList} accessibilityLabel="Check items" />
+        <ActionButton icon="history" onPress={goToEditHistory} accessibilityLabel="Edit history" />
       </Card.Actions>
     </Card>
   );
 }
 
-function ActionButton({ icon, onPress }) {
+function ActionButton({ icon, onPress, accessibilityLabel }) {
   const theme = useTheme()
   return (
-    <TouchableOpacity onPress={onPress} style={styles.btn}>
-      <MaterialCommunityIcons
-        name={icon}
-        size={24}
-        color={theme.colors.primary}
-      />
+    <TouchableOpacity
+      onPress={onPress}
+      style={styles.btn}
+      activeOpacity={0.6}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+    >
+      <MaterialCommunityIcons name={icon} size={24} color={theme.colors.primary} />
     </TouchableOpacity>
   )
 }
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: 12,
-    marginVertical: 8,
-    borderRadius: 8,
-    elevation: 3
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.sm,
+    borderRadius: radius.md,
   },
   actions: {
     justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    paddingVertical: 4
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   btn: {
-    padding: 8
-  }
+    padding: spacing.sm,
+    minWidth: MIN_HIT_TARGET,
+    minHeight: MIN_HIT_TARGET,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 })
