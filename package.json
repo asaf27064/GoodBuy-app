@@ -11,7 +11,8 @@
     "dev:worker": "npm run check-env && npm --prefix backend/src run worker",
     "dev:mobile": "npm run check-config && npm --prefix mobile-app/src run start",
     "check-env": "node scripts/checkEnvReminder.js",
-    "check-config": "node scripts/checkApiBase.js"
+    "check-config": "node scripts/checkApiBase.js",
+    "test": "npm --prefix backend/src run test"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
