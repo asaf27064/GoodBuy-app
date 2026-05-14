@@ -69,6 +69,10 @@ export const AuthProvider = ({ children }) => {
                 await SecureStore.setItemAsync('refreshToken', data.refreshToken);
               }
               applyAuth(data.accessToken);
+              // Propagate the new token to React state so downstream effects
+              // (e.g. ListSocketContext useEffect([token])) reconnect with the
+              // fresh token instead of silently failing with the expired one.
+              setToken(data.accessToken);
               orig.headers.Authorization = `Bearer ${data.accessToken}`;
               return axios(orig);
             } catch {

@@ -14,17 +14,23 @@ export const ListSocketProvider = ({ children }) => {
 
   useEffect(() => {
     if (!token) return
-    socketRef.current = io(API_BASE, { auth: { token } })
+    // Re-created whenever `token` changes (login, refresh-rotation, logout).
+    // Each fresh socket carries the current access token in its handshake.
+    setConnected(false)
+    const socket = io(API_BASE, { auth: { token } })
+    socketRef.current = socket
 
-    socketRef.current.on('connect', () => {
+    socket.on('connect', () => {
       setConnected(true)
-      pending.current.forEach(([ev, cb]) => socketRef.current.on(ev, cb))
+      // Drain any listeners registered before the connection was open.
+      const queued = pending.current
       pending.current = []
+      queued.forEach(([ev, cb]) => socket.on(ev, cb))
     })
 
-    socketRef.current.on('disconnect', () => setConnected(false))
+    socket.on('disconnect', () => setConnected(false))
 
-    socketRef.current.on('editingUsers', ({ user, type }) => {
+    socket.on('editingUsers', ({ user, type }) => {
       setEditingUsers(prev => {
         const id = user.listId
         const set = new Set(prev[id] || [])
@@ -34,20 +40,28 @@ export const ListSocketProvider = ({ children }) => {
       })
     })
 
-    return () => socketRef.current.disconnect()
+    return () => {
+      // Only drop the ref if it still points at this socket — guards against
+      // a stale cleanup overwriting a newer connection during rapid re-runs.
+      if (socketRef.current === socket) socketRef.current = null
+      socket.removeAllListeners()
+      socket.disconnect()
+    }
   }, [token])
 
   const on = (ev, cb) => {
-    if (connected) socketRef.current.on(ev, cb)
+    if (connected && socketRef.current) socketRef.current.on(ev, cb)
     else pending.current.push([ev, cb])
   }
 
   const off = (ev, cb) => {
-    if (connected) socketRef.current.off(ev, cb)
+    if (connected && socketRef.current) socketRef.current.off(ev, cb)
     pending.current = pending.current.filter(p => p[0] !== ev || p[1] !== cb)
   }
 
-  const emit = (ev, data) => socketRef.current?.emit(ev, data)
+  const emit = (ev, data) => {
+    if (socketRef.current && socketRef.current.connected) socketRef.current.emit(ev, data)
+  }
 
   const joinList  = id => emit('joinList',  { listId: id })
   const leaveList = id => emit('leaveList', { listId: id })
