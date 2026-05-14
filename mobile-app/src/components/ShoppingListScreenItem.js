@@ -10,7 +10,11 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 // check items and view edit history.
 export default function ShoppingListScreenItem({ listObj, navigation }) {
   const theme = useTheme();
-  const { title, members, _id } = listObj;
+  const { title, members = [], _id } = listObj;
+  const memberLabels = members
+    .map(u => (typeof u === 'string' ? '' : (u?.username || u?.email || '')))
+    .filter(Boolean)
+    .join(', ');
 
   const goToEditList = () =>
     navigation.navigate('EditItems', { listObj })
@@ -28,7 +32,7 @@ export default function ShoppingListScreenItem({ listObj, navigation }) {
       <Card.Content>
         <Text style={[theme.text, theme.headlineMedium, { color: theme.colors.onSurface }]}>{title}</Text>
         <Text style={[theme.text, theme.mutedText, {marginVertical: 5}]}>
-          חברים ברשימה: {members.map(u => u.username).join(', ')}
+          חברים ברשימה: {memberLabels || '—'}
         </Text>
       </Card.Content>
 

@@ -75,10 +75,34 @@ export default function RecommendationsScreen({ route, navigation }) {
   };
 
   useEffect(() => {
+    let active = true;
+    setLoading(true);
     (async () => {
-      await fetchRecommendations(true);
-      setLoading(false);
+      try {
+        const { data } = await axios.get(
+          `/api/Recommendations?listId=${listObj._id}&showAllAI=true`
+        );
+        if (!active) return;
+        if (Array.isArray(data)) {
+          setMainRecs(data);
+          setSupplementaryAI([]);
+          setSupplementaryOther([]);
+          setStats({});
+        } else {
+          setMainRecs(data.main || []);
+          const aiItems    = (data.supplementaryAI || []).filter(i => i.method === 'ai');
+          const otherItems = (data.supplementaryAI || []).filter(i => i.method !== 'ai');
+          setSupplementaryAI(aiItems);
+          setSupplementaryOther(otherItems);
+          setStats(data.stats || {});
+        }
+      } catch (err) {
+        if (active) console.error(err);
+      } finally {
+        if (active) setLoading(false);
+      }
     })();
+    return () => { active = false };
   }, [listObj._id]);
 
   const handleToggleExtra = () => {

@@ -64,6 +64,10 @@ export const AuthProvider = ({ children }) => {
             try {
               const { data } = await axios.post('/auth/refresh', { refreshToken: rt });
               await SecureStore.setItemAsync('token', data.accessToken);
+              // Persist rotated refresh token when the server returns one
+              if (data.refreshToken) {
+                await SecureStore.setItemAsync('refreshToken', data.refreshToken);
+              }
               applyAuth(data.accessToken);
               orig.headers.Authorization = `Bearer ${data.accessToken}`;
               return axios(orig);

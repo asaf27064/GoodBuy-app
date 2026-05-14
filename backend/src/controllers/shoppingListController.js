@@ -1,4 +1,6 @@
+const mongoose = require('mongoose')
 const ShoppingList = require('../models/shoppingListModel')
+const User = require('../models/userModel')
 
 exports.getAllUserShoppingLists = async (req, res) => {
   try {
@@ -14,8 +16,17 @@ exports.createList = async (req, res) => {
   try {
     const uid = (req.user.sub || req.user._id).toString()
     const { title, importantList, members } = req.body
-    const allMembers = Array.from(new Set([uid, ...(members || []).map(m => m.toString())]))
-    const list = await ShoppingList.create({ title, importantList, members: allMembers, products: [], editLog: [] })
+    const safeTitle = typeof title === 'string' ? title.slice(0, 200) : ''
+    const rawMembers = Array.isArray(members) ? members : []
+    const candidateIds = rawMembers
+      .map(m => (m == null ? '' : String(m)))
+      .filter(id => mongoose.isValidObjectId(id))
+    // Only accept member ids that correspond to real users
+    const verified = candidateIds.length
+      ? (await User.find({ _id: { $in: candidateIds } }).select('_id').lean()).map(u => String(u._id))
+      : []
+    const allMembers = Array.from(new Set([uid, ...verified]))
+    const list = await ShoppingList.create({ title: safeTitle, importantList: !!importantList, members: allMembers, products: [], editLog: [] })
     const populated = await list.populate('members', '-passwordHash')
     const creatorName = req.user.username || req.user.email || String(req.user._id)
     const now = new Date().toISOString()

@@ -1,5 +1,5 @@
 import React, {
-  createContext, useState, useEffect, useCallback
+  createContext, useState, useEffect, useCallback, useRef
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
@@ -15,6 +15,11 @@ export function PriceSyncProvider({ children }) {
   const theme = useTheme();
   const showSnack = msg =>
     setSnack({ visible: true, msg });
+
+  const pollTimerRef = useRef(null);
+  useEffect(() => () => {
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -57,7 +62,8 @@ export function PriceSyncProvider({ children }) {
       return false;
     }
 
-    const timer = setInterval(async () => {
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    pollTimerRef.current = setInterval(async () => {
       try {
         const { data } = await axios.get('/api/system/price-status');
 
@@ -68,7 +74,8 @@ export function PriceSyncProvider({ children }) {
         }
 
         if (!data.running) {
-          clearInterval(timer);
+          clearInterval(pollTimerRef.current);
+          pollTimerRef.current = null;
           setSyncing(false);
           showSnack('Prices updated ✓');
         }

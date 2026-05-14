@@ -86,7 +86,9 @@ export default function HomeScreen() {
   const saveNearestStoresLocally = async function (address, locationName, storesData) {
       try {
         const locationStoresData = JSON.stringify({locationAddress: address, nearestStores: storesData});
-        const key = '@' + user.id + "_location-stores:" + locationName;
+        const uid = user?.id || user?._id;
+        if (!uid) { console.warn('saveNearestStoresLocally: no user id'); return; }
+        const key = '@' + uid + "_location-stores:" + locationName;
         await AsyncStorage.setItem(key, locationStoresData);
         console.log('Token saved!');
       } catch (e) {

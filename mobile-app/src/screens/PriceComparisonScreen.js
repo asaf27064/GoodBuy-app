@@ -29,7 +29,8 @@ function PriceComparisonScreen({route}) {
   const globalStyles = makeGlobalStyles(theme);
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const LOCAL_STORAGE_IDENTIFIER = "@" + user.id + "_location-stores:"; // define this screen's key prefix for relevant local data.
+  const userId = user?.id || user?._id || '';
+  const LOCAL_STORAGE_IDENTIFIER = "@" + userId + "_location-stores:"; // define this screen's key prefix for relevant local data.
 
 
   // Remove bottom tab when navigating to this screen.

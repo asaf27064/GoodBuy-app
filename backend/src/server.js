@@ -9,27 +9,58 @@ const jwt = require('jsonwebtoken')
 require('./scheduler/priceRefreshScheduler');
 
 const app = express()
-app.use(cors())
-app.use(express.json())
+// CORS — allow restricting origins via env without breaking dev (defaults to permissive only when unset)
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean)
+app.use(cors(allowedOrigins.length ? { origin: allowedOrigins, credentials: true } : {}))
+// JSON body size cap — guards against accidental memory abuse on the public API
+app.use(express.json({ limit: '256kb' }))
 
 mongoose.connect(process.env.MONGO_URI).then(() => console.log('Connected to MongoDB')).catch(err => console.error(err))
 
 const server = http.createServer(app)
-const io = socketIo(server, { cors: { origin: '*' } })
+const io = socketIo(server, {
+  cors: allowedOrigins.length ? { origin: allowedOrigins, credentials: true } : { origin: '*' }
+})
 global.io = io
 
+// Require a valid JWT on every socket connection; without it we drop the connection.
+const ShoppingListModel = require('./models/shoppingListModel')
 io.use((socket, next) => {
   const token = socket.handshake.auth?.token
-  try { if (token) socket.user = jwt.verify(token, process.env.JWT_SECRET) } catch {}
-  next()
+  if (!token) return next(new Error('unauthorized'))
+  try {
+    socket.user = jwt.verify(token, process.env.JWT_SECRET)
+    return next()
+  } catch {
+    return next(new Error('unauthorized'))
+  }
 })
 
 io.on('connection', socket => {
-  if (socket.user?.sub) socket.join(`user:${socket.user.sub}`)
-  socket.on('joinList', ({ listId }) => socket.join(`list:${listId}`))
-  socket.on('leaveList', ({ listId }) => socket.leave(`list:${listId}`))
-  socket.on('editingStart', d => io.to(`list:${d.listId}`).emit('editingUsers', { user: d.user, type: 'add' }))
-  socket.on('editingStop',  d => io.to(`list:${d.listId}`).emit('editingUsers', { user: d.user, type: 'remove' }))
+  const uid = socket.user?.sub
+  if (uid) socket.join(`user:${uid}`)
+
+  // Only allow joining a list room if the user is actually a member of that list.
+  socket.on('joinList', async ({ listId }) => {
+    try {
+      if (!uid || !listId) return
+      const list = await ShoppingListModel.findById(listId).select('members').lean()
+      if (!list) return
+      if (!list.members.map(String).includes(String(uid))) return
+      socket.join(`list:${listId}`)
+    } catch {}
+  })
+  socket.on('leaveList', ({ listId }) => listId && socket.leave(`list:${listId}`))
+
+  // Only forward editing presence if the socket has already joined that list room.
+  socket.on('editingStart', d => {
+    if (!d?.listId || !socket.rooms.has(`list:${d.listId}`)) return
+    io.to(`list:${d.listId}`).emit('editingUsers', { user: d.user, type: 'add' })
+  })
+  socket.on('editingStop', d => {
+    if (!d?.listId || !socket.rooms.has(`list:${d.listId}`)) return
+    io.to(`list:${d.listId}`).emit('editingUsers', { user: d.user, type: 'remove' })
+  })
 })
 
 const userRoutes = require('./routes/userRoutes')

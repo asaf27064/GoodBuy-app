@@ -96,6 +96,7 @@ exports.getRecs = async (req, res) => {
 
     res.json(response);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('getRecs error:', err);
+    res.status(500).json({ error: 'Server error' });
   }
 };

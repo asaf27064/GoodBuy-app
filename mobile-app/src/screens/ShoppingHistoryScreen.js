@@ -22,22 +22,31 @@ export default function ShoppingHistoryScreen({route, navigation}) {
 
   const [history, setHistory] = useState([]);
 
-  useEffect(() => {
-    if (!user?.id) return
-
-    axios
-      .get(`/api/Purchases/` + user.id)
-      .then(({ data }) => setHistory(Array.isArray(data) ? data : []))
-      .catch(err => {
-        console.error('Error fetching purchase history:', err)
-        setHistory([])
-      })
-  }, [])
+  // Re-fetch every time the History tab gets focus, not only on first mount.
+  // Otherwise a fresh purchase made in CheckList won't show until app restart.
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id) return
+      let active = true
+      axios
+        .get(`/api/Purchases/` + user.id)
+        .then(({ data }) => { if (active) setHistory(Array.isArray(data) ? data : []) })
+        .catch(err => {
+          console.error('Error fetching purchase history:', err)
+          if (active) setHistory([])
+        })
+      return () => { active = false }
+    }, [user?.id])
+  )
 
   const renderItem = ({ item }) => {
-
+    // listId may be null if the source list was deleted, or a raw ObjectId
+    // if a code path skipped .populate(); fall back to a generic title.
+    const title = (item.listId && typeof item.listId === 'object' && item.listId.title)
+      ? item.listId.title
+      : 'רשימה שנמחקה';
     return (
-      <ShoppingHistoryScreenItem title={item.listId.title} purchasedProds={item.products} timeStamp={item.timeStamp}/>
+      <ShoppingHistoryScreenItem title={title} purchasedProds={item.products} timeStamp={item.timeStamp}/>
     );
     /*
     <View style={localStyles.row}>

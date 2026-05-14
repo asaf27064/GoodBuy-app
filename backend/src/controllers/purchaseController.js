@@ -2,10 +2,14 @@ const Purchase = require('../models/purchaseModel');
 const shoppingListService = require('../services/shoppingListService');
 const ShoppingList = require('../models/shoppingListModel');
 
-// Get purchase history for a user
+// Get purchase history for a user (self only)
 exports.getUserPurchases = async (req, res) => {
   try {
     const { user_id } = req.params;
+    const requesterId = String(req.user?._id || req.user?.id || req.user?.sub || '');
+    if (!requesterId || String(user_id) !== requesterId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
 
     let listIds = [];
     try {
@@ -26,12 +30,10 @@ exports.getUserPurchases = async (req, res) => {
       ]
     })
       .populate('listId', 'title')
-      .sort({ timeStamp: -1 }); // fix: correct field is timeStamp
+      .sort({ timeStamp: -1 });
 
-    if (!purchaseHistory.length) {
-      return res.status(404).json({ error: 'Purchase history not found' });
-    }
-
+    // Return empty array instead of 404 for empty history (mobile already
+    // handles arrays; 404 was being swallowed and produced no UI signal).
     res.json(purchaseHistory);
   } catch (error) {
     res.status(500).json({ error: error.message });
