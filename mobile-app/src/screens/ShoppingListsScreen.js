@@ -93,9 +93,10 @@ export default function ShoppingListScreen({ navigation, route }) {
   const fetchShoppingLists = async () => {
     try {
       const { data } = await axios.get('/api/ShoppingLists');
-
-      // Update user's lists with updated data from server.
-      setShoppingLists(prev => mergeLists(prev, data));
+      // Authoritative full-fetch: REPLACE local state, don't merge.
+      // Merging here causes deleted lists / lists the user was removed from
+      // to stick around in the UI forever.
+      setShoppingLists(Array.isArray(data) ? data : []);
     } catch {}
     finally { setLoading(false) }
   }
@@ -127,7 +128,7 @@ export default function ShoppingListScreen({ navigation, route }) {
     ;(async () => {
       try {
         const { data } = await axios.get('/api/ShoppingLists')
-        if (active) setShoppingLists(prev => mergeLists(prev, data))
+        if (active) setShoppingLists(Array.isArray(data) ? data : [])
       } finally { if (active) setLoading(false) }
     })()
     return () => { active = false }
@@ -137,7 +138,10 @@ export default function ShoppingListScreen({ navigation, route }) {
   // Which updates each user's shopping lists.
   useEffect(() => {
     const h = l => {
-      if (l.members.some(m => m._id === user.id || m._id === user._id))
+      if (!l?.members) return
+      const uid = user?.id || user?._id
+      if (!uid) return
+      if (l.members.some(m => String(m?._id || m) === String(uid)))
         setShoppingLists(prev => mergeLists(prev, [l]))
     }
     on('listCreated', h)

@@ -60,19 +60,25 @@ exports.getById = async (req, res) => {
 
 exports.getListPriceInStores = async (req, res) => {
   try {
+    let stores, products
+    try {
+      stores   = JSON.parse(req.query.stores || '[]')
+      products = JSON.parse(req.query.products || '{}')
+    } catch {
+      return res.status(400).json({ error: 'Invalid JSON in query params' })
+    }
+    if (!Array.isArray(stores) || typeof products !== 'object' || products === null || Array.isArray(products)) {
+      return res.status(400).json({ error: 'Bad request shape' })
+    }
 
-    // A list of stores ObjIds
-    const  stores = JSON.parse(req.query.stores);
-    
-    // An object with key-value pairs of "itemcode"-"{name, amount}"
-    const  products = JSON.parse(req.query.products);
-
-    // Extract itemcodes into a list
-    const itemCodes = Object.keys(products);
+    // Extract itemcodes into a list (strings only — prevents passing objects that
+    // would otherwise turn into NoSQL operator injections inside $in).
+    const itemCodes = Object.keys(products).filter(k => typeof k === 'string')
 
     const pricesInStores = [];
 
     for(const store of stores) {
+      if (!store || typeof store !== 'object' || typeof store.storeId !== 'string') continue;
 
       const productsMatched = await ProductWithPrice.find({
         itemCode: { $in: itemCodes },
@@ -86,7 +92,8 @@ exports.getListPriceInStores = async (req, res) => {
       }
 
       const orderedProductPrices = itemCodes.map(code => {
-        return {productCode: code, name: products[code].name, amount: products[code].amount, unitPrice: (priceMap.hasOwnProperty(code) ? priceMap[code] : null)}
+        const p = products[code] || {}
+        return {productCode: code, name: typeof p.name === 'string' ? p.name : '', amount: Number(p.amount) || 0, unitPrice: (Object.prototype.hasOwnProperty.call(priceMap, code) ? priceMap[code] : null)}
       });
       
 

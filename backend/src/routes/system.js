@@ -1,5 +1,6 @@
 const express        = require('express');
 const router         = express.Router();
+const auth           = require('../middleware/auth');
 const SystemMeta     = require('../models/SystemMeta');
 const runPricePpln   = require('../jobs/run-price-pipeline');
 
@@ -11,7 +12,8 @@ function isRunning(meta) {
   );
 }
 
-router.get('/price-status', async (req, res) => {
+// Read-only status: requires auth (PriceSyncContext polls this from mobile)
+router.get('/price-status', auth, async (req, res) => {
   const meta = await SystemMeta.findById('price-refresh').lean();
   if (!meta) return res.status(404).json({ message: 'Not found' });
 
@@ -22,7 +24,8 @@ router.get('/price-status', async (req, res) => {
   });
 });
 
-router.post('/price-refresh', async (req, res) => {
+// Triggering the pipeline is expensive — require auth (was wide-open before)
+router.post('/price-refresh', auth, async (req, res) => {
   const meta = await SystemMeta.findById('price-refresh').lean();
 
   if (isRunning(meta))

@@ -57,31 +57,24 @@ export default function EditListScreen({ route, navigation }) {
   useFocusEffect(useCallback(() => {
     const add = route.params?.addedItem
     const timestamp = route.params?.timestamp
-    
-    if (add && timestamp) {
-      console.log('📥 useFocusEffect: Adding item from params:', add.name)
-      const itemExists = products.some(x => x.product.itemCode === add.itemCode)
-      if (itemExists) {
-        console.log('⚠️ Item already in list:', add.name)
-        navigation.setParams({ addedItem: undefined, timestamp: undefined })
-        return
-      }
+    if (!add || !timestamp) return
 
-      setProducts(p => [...p, { product: add, numUnits: 1 }])
-      
-      const id = pushChange({ 
-        action: 'added', 
-        product: add, 
-        timeStamp: new Date(), 
-        changedBy: user.username 
+    // Clear the params FIRST so the effect can't re-fire for the same item
+    // even if a re-render happens before the state update settles.
+    navigation.setParams({ addedItem: undefined, timestamp: undefined })
+
+    setProducts(prev => {
+      if (prev.some(x => x.product.itemCode === add.itemCode)) return prev
+      const id = pushChange({
+        action: 'added',
+        product: add,
+        timeStamp: new Date(),
+        changedBy: user.username
       })
       saveChangesDebounced(id)
-      
-      console.log('✅ Item added via useFocusEffect:', add.name)
-      
-      navigation.setParams({ addedItem: undefined, timestamp: undefined })
-    }
-  }, [route.params?.addedItem, route.params?.timestamp, navigation, products, pushChange, saveChangesDebounced, user.username]))
+      return [...prev, { product: add, numUnits: 1 }]
+    })
+  }, [route.params?.addedItem, route.params?.timestamp, navigation, user.username]))
 
   const saveChanges = async id => {
     const e = pendingMap.current.get(id)

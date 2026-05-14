@@ -50,12 +50,12 @@ export default function AddItemScreen({ route, navigation }) {
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(50)).current
 
-  // Remove Drawer Button from header
+  // Remove Drawer Button from header (run once per navigation)
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => null,
     })
-  })
+  }, [navigation])
 
   useEffect(() => {
     Animated.parallel([
@@ -71,7 +71,8 @@ export default function AddItemScreen({ route, navigation }) {
       }),
     ]).start()
 
-    setTimeout(() => searchBarRef.current?.focus(), 600)
+    const focusTimer = setTimeout(() => searchBarRef.current?.focus(), 600)
+    return () => clearTimeout(focusTimer)
   }, [])
 
   const doSearch = useCallback(
@@ -85,7 +86,7 @@ export default function AddItemScreen({ route, navigation }) {
       
       setLoading(true)
       try {
-        const { data } = await axios.get(`/api/Products/search/${term}`)
+        const { data } = await axios.get(`/api/Products/search/${encodeURIComponent(term)}`)
         setResults(data.results || [])
         
         const uniqueCategories = [...new Set(

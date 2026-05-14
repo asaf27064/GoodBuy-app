@@ -107,6 +107,9 @@ router.post(
 )
 
 // POST /auth/refresh
+// Rotates the refresh token on every use. Old token becomes invalid immediately,
+// so a leaked token can be used at most once. Existing mobile code is backwards
+// compatible: it stores `data.accessToken`, and now optionally `data.refreshToken`.
 router.post(
   '/refresh',
   async (req, res) => {
@@ -122,13 +125,18 @@ router.post(
       const user = await User.findById(payload.sub)
 
       if (!user || user.refreshToken !== refreshToken) {
+        // Reuse of an invalidated token: hard-revoke the session as defense-in-depth
+        if (user) { user.refreshToken = null; await user.save() }
         return res
           .status(403)
           .json({ message: 'Refresh token לא תקין.' })
       }
 
-      const newAccessToken = generateAccessToken(user.id)
-      return res.json({ accessToken: newAccessToken })
+      const newAccessToken  = generateAccessToken(user.id)
+      const newRefreshToken = generateRefreshToken(user.id)
+      user.refreshToken = newRefreshToken
+      await user.save()
+      return res.json({ accessToken: newAccessToken, refreshToken: newRefreshToken })
     } catch (err) {
       console.error('Refresh error:', err)
       return res
