@@ -112,12 +112,19 @@ export default function ShoppingListScreen({ navigation, route }) {
     finally { setRefreshing(false); }
   };
 
-  // Leave list
+  // Leave list — optimistic: remove from local state immediately, rollback if the
+  // server rejects. The previous flow showed a spinner during the round-trip; now
+  // the list disappears the moment the user taps "פרוש".
   const leaveList = async (listId) => {
+    let snapshot = null;
+    setShoppingLists(prev => {
+      snapshot = prev;
+      return prev.filter(l => l._id !== listId);
+    });
     try {
       await axios.post(`/api/ShoppingLists/${listId}/leave`);
-      setShoppingLists(prev => prev.filter(l => l._id !== listId));
     } catch (e) {
+      if (snapshot) setShoppingLists(snapshot);
       toast('הסרה מהרשימה נכשלה', { variant: 'error' });
     }
   };
@@ -201,20 +208,45 @@ export default function ShoppingListScreen({ navigation, route }) {
   const addList = () => setModalVisible(true);
   const close = () => setModalVisible(false);
 
-  // Create a new list in the server upon confiming in "addListModal".
+  // Create a new list — optimistic: append a placeholder list immediately and
+  // swap it for the server's authoritative copy when the POST resolves. The
+  // modal already closes synchronously in AddListModal.onSubmit; this just
+  // makes the new card appear instantly instead of after a network round-trip.
   const createNewList = async (title, ids, imp) => {
+    const tmpId = `_tmp:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
+    const optimistic = {
+      _id: tmpId,
+      title,
+      members: [{ _id: user?.id || user?._id, username: user?.username || user?.email }],
+      products: [],
+      editLog: [],
+      _isOptimistic: true,
+    };
+    setShoppingLists(prev => [optimistic, ...prev]);
+    close();
     try {
-      const { data } = await axios.post('/api/ShoppingLists', { title, members: ids});
-      setShoppingLists(prev => mergeLists(prev, [data]));
-      close();
-    } catch {}
+      const { data } = await axios.post('/api/ShoppingLists', { title, members: ids });
+      // Swap the temp entry for the server's authoritative copy.
+      setShoppingLists(prev => {
+        const without = prev.filter(l => l._id !== tmpId);
+        // Avoid double-insert if the socket 'listCreated' beat us to it.
+        return without.some(l => l._id === data._id) ? without : [data, ...without];
+      });
+    } catch {
+      setShoppingLists(prev => prev.filter(l => l._id !== tmpId));
+      toast('יצירת הרשימה נכשלה', { variant: 'error' });
+    }
   }
 
   const renderItem = ({ item }) => (
     <TouchableOpacity
       activeOpacity={0.9}
-      onLongPress={() => confirmLeave(item)}
+      // No long-press leave on an optimistic placeholder (the server-side list
+      // doesn't exist yet, so calling /leave would 404).
+      onLongPress={item._isOptimistic ? undefined : () => confirmLeave(item)}
       delayLongPress={450}
+      // Dim while in flight so the user can see it isn't final.
+      style={item._isOptimistic ? { opacity: 0.6 } : null}
     >
       <ShoppingListScreenItem listObj={item} navigation={navigation} />
     </TouchableOpacity>
