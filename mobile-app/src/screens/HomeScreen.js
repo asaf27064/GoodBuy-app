@@ -13,6 +13,7 @@ import { API_BASE } from '../config';
 import { useAuth } from '../contexts/AuthContext'
 import { useFocusEffect } from '@react-navigation/native';
 import { spacing, radius, elevation, typography } from '../theme/tokens';
+import * as Haptic from '../utils/haptics';
 
 import { FlatList } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -54,7 +55,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const [isModalVisible, setModalVisible] = useState(false);
-  const addLocation = () => setModalVisible(true);
+  const addLocation = () => { Haptic.tap(); setModalVisible(true); };
   const closeModal = () => setModalVisible(false);
 
   const getCoordinatesFromAddress = async function (address, locationName) {
