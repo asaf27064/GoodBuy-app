@@ -1,7 +1,15 @@
 {
   "scripts": {
     "start": "node server.js",
-    "worker": "node jobs/worker.js"
+    "worker": "node jobs/worker.js",
+    "test": "jest"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testPathIgnorePatterns": ["/node_modules/", "/priceFetch/"]
+  },
+  "devDependencies": {
+    "jest": "^30.0.0"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.812.0",
