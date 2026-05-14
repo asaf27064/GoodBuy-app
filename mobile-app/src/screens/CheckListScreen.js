@@ -13,6 +13,7 @@ import ProductCheckListItem from '../components/CheckListScreenItem'
 import ConfirmPurchaseModal from '../components/ConfirmPurchaseModal'
 import { useToast } from '../contexts/ToastContext'
 import { useT } from '../utils/translations'
+import * as Haptic from '../utils/haptics'
 import { API_BASE } from '../config'
 
 export default function CheckListScreen({ route, navigation }) {
@@ -122,7 +123,7 @@ export default function CheckListScreen({ route, navigation }) {
           styles.addListBtn,
           { bottom: insets.bottom + 70, backgroundColor: theme.colors.primary }
         ]}
-        onPress={() => setModalVisible(true)}
+        onPress={() => { Haptic.tap(); setModalVisible(true); }}
       >
         <Text style={styles.text}>{t('checkListScreen.finishPuchaseButtonText')}</Text>
       </TouchableOpacity>

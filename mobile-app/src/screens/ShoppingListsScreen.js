@@ -21,6 +21,7 @@ import AddItemScreen from './AddItemScreen'
 import { useListSocket } from '../contexts/ListSocketContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
+import * as Haptic from '../utils/haptics'
 import { API_BASE } from '../config'
 
 // Defined baseURL, all requests URLs will implicitly include it.
@@ -130,6 +131,9 @@ export default function ShoppingListScreen({ navigation, route }) {
   };
 
   const confirmLeave = (listObj) => {
+    // Long-press → warning haptic: signals "you're about to do something
+    // destructive" before the confirm dialog even appears.
+    Haptic.warning()
     Alert.alert(
       'פרישה מרשימה',
       `לפרוש מהרשימה "${listObj.title}"?`,
@@ -306,7 +310,7 @@ export default function ShoppingListScreen({ navigation, route }) {
         />
       </View>
       <TouchableOpacity
-        onPress={addList}
+        onPress={() => { Haptic.tap(); addList() }}
         style={[
           {
             position: 'absolute',
