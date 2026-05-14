@@ -24,6 +24,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { MotiView, AnimatePresence } from 'moti'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAddItem } from '../contexts/AddItemContext'
+import { spacing, radius, elevation, typography } from '../theme/tokens'
 import { API_BASE } from '../config'
 
 axios.defaults.baseURL = API_BASE
@@ -346,42 +347,35 @@ export default function AddItemScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1 
+  container: {
+    flex: 1
   },
   searchHeader: {
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    paddingBottom: 12,
+    ...elevation.lg,
+    paddingBottom: spacing.md,
   },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    gap: 8,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    gap: spacing.sm,
   },
   searchbar: {
     flex: 1,
     elevation: 0,
-    borderRadius: 12,
+    borderRadius: radius.md,
   },
   viewToggle: {
-    borderRadius: 12,
+    borderRadius: radius.md,
   },
   recentsContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
   },
   recentsTitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    ...typography.overline,
+    marginBottom: spacing.sm,
   },
   chipsRow: {
     flexDirection: 'row',
@@ -393,23 +387,20 @@ const styles = StyleSheet.create({
     marginRight: 0,
   },
   categoriesContainer: {
-    paddingTop: 12,
+    paddingTop: spacing.md,
   },
   categoriesTitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 8,
-    marginLeft: 16,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    ...typography.overline,
+    marginBottom: spacing.sm,
+    marginLeft: spacing.lg,
   },
   categoryChip: {
-    marginLeft: 8,
+    marginLeft: spacing.sm,
     marginRight: 0,
   },
   list: {
-    paddingBottom: 16,
-    paddingTop: 8,
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.sm,
   },
   emptyList: {
     flex: 1,
@@ -417,92 +408,79 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     alignItems: 'center',
-    padding: 32,
+    padding: spacing.xxl,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 8,
+    ...typography.title,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
   },
   emptySubtitle: {
-    fontSize: 14,
+    ...typography.body,
     textAlign: 'center',
-    lineHeight: 20,
   },
   listRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    marginHorizontal: 12,
-    marginVertical: 4,
-    borderRadius: 12,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    padding: spacing.lg,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.xs,
+    borderRadius: radius.md,
+    ...elevation.sm,
   },
   listThumb: {
     width: 56,
     height: 56,
-    borderRadius: 8,
+    borderRadius: radius.sm,
   },
   listText: {
-    marginLeft: 16,
+    marginLeft: spacing.lg,
     flex: 1,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '600',
-    lineHeight: 22,
+    ...typography.subtitle,
   },
   subtitle: {
-    fontSize: 13,
-    marginTop: 4,
-    lineHeight: 18,
+    ...typography.caption,
+    marginTop: spacing.xs,
   },
   cardContainer: {
     width: CARD_WIDTH,
     margin: CARD_MARGIN,
-    borderRadius: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    borderRadius: radius.lg,
+    ...elevation.md,
     borderWidth: 1,
     overflow: 'hidden',
   },
   cardImage: {
     width: '100%',
     height: CARD_WIDTH * 0.7,
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
+    borderTopLeftRadius: radius.lg - 1,
+    borderTopRightRadius: radius.lg - 1,
   },
   cardContent: {
-    padding: 12,
+    padding: spacing.md,
   },
   cardTitle: {
-    fontSize: 14,
+    ...typography.body,
     fontWeight: '600',
     lineHeight: 18,
   },
   cardCategory: {
     fontSize: 11,
-    marginTop: 4,
+    marginTop: spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   addButton: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: spacing.sm,
+    right: spacing.sm,
     width: 28,
     height: 28,
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 2,
+    ...elevation.md,
   },
 })
