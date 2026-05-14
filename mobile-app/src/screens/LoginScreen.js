@@ -8,11 +8,13 @@ import {
 } from 'react-native'
 import { Text, TextInput, HelperText, Button, useTheme } from 'react-native-paper'
 import { useAuth } from '../contexts/AuthContext'
+import { useT } from '../utils/translations'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 
 export default function LoginScreen() {
   const theme = useTheme()
   const styles = makeStyles(theme)
+  const t = useT()
 
   const { login } = useAuth()
   const navigation = useNavigation()
@@ -36,7 +38,7 @@ export default function LoginScreen() {
     try {
       await login(username, password)
     } catch (e) {
-      const msg = e.response?.data?.message || 'אירעה שגיאה, נסה שוב מאוחר יותר'
+      const msg = e.response?.data?.message || t('loginScreen.serverError')
       setError(msg)
     } finally {
       setLoading(false)
@@ -47,10 +49,10 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.card}>
-          <Text style={styles.title}>התחברות</Text>
+          <Text style={styles.title}>{t('loginScreen.title')}</Text>
 
           <TextInput
-            label="Username"
+            label={t('shared.username')}
             mode="outlined"
             value={username}
             onChangeText={setUsername}
@@ -61,7 +63,7 @@ export default function LoginScreen() {
           />
 
           <TextInput
-            label="Password"
+            label={t('shared.password')}
             mode="outlined"
             value={password}
             onChangeText={setPassword}
@@ -84,7 +86,7 @@ export default function LoginScreen() {
             buttonColor={theme.colors.primary}
             rippleColor="rgba(255,255,255,0.3)"
           >
-            התחבר
+            {t('loginScreen.loginButtonText')}
           </Button>
 
           <Button
@@ -93,7 +95,7 @@ export default function LoginScreen() {
             style={styles.link}
             labelStyle={[styles.linkLabel, { color: theme.colors.primary }]}
           >
-            אין לך חשבון? הרשמה
+            {t('loginScreen.goToSignUpText')}
           </Button>
         </View>
       </ScrollView>
