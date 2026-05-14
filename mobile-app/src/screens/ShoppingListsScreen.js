@@ -20,6 +20,7 @@ import PriceComparisonScreen from './PriceComparisonScreen'
 import AddItemScreen from './AddItemScreen'
 import { useListSocket } from '../contexts/ListSocketContext'
 import { useAuth } from '../contexts/AuthContext'
+import { useToast } from '../contexts/ToastContext'
 import { API_BASE } from '../config'
 
 // Defined baseURL, all requests URLs will implicitly include it.
@@ -79,6 +80,7 @@ export default function ShoppingListScreen({ navigation, route }) {
   const [refreshing, setRefreshing] = useState(false);
   const { on, off } = useListSocket();
   const { user } = useAuth();
+  const { show: toast } = useToast();
 
   const userIdStr = (user?.id || user?._id || '').toString();
 
@@ -116,7 +118,7 @@ export default function ShoppingListScreen({ navigation, route }) {
       await axios.post(`/api/ShoppingLists/${listId}/leave`);
       setShoppingLists(prev => prev.filter(l => l._id !== listId));
     } catch (e) {
-      Alert.alert('שגיאה', 'הסרה מהרשימה נכשלה..');
+      toast('הסרה מהרשימה נכשלה', { variant: 'error' });
     }
   };
 

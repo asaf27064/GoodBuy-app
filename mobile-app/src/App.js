@@ -18,6 +18,7 @@ import HomeScreen from './screens/HomeScreen';
 
 // Auth
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ToastProvider } from './contexts/ToastContext';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 
@@ -151,9 +152,11 @@ export default function App() {
   return (
     <PaperProvider theme={paperTheme}>
       <AuthProvider>
-        <NavigationContainer>
-          <RootNavigator />
-        </NavigationContainer>
+        <ToastProvider>
+          <NavigationContainer>
+            <RootNavigator />
+          </NavigationContainer>
+        </ToastProvider>
       </AuthProvider>
     </PaperProvider>
   );
