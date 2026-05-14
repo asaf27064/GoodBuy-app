@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "worker": "node jobs/worker.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.812.0",

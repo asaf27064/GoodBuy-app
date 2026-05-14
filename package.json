@@ -6,8 +6,9 @@
     "mobile-app/src"
   ],
   "scripts": {
-    "dev": "npm run check-env && npm run check-config && concurrently \"npm run dev:backend\" \"npm run dev:mobile\"",
+    "dev": "npm run check-env && npm run check-config && concurrently -n api,worker,mobile -c blue,magenta,green \"npm run dev:backend\" \"npm run dev:worker\" \"npm run dev:mobile\"",
     "dev:backend": "npm run check-env && npm run check-config && npm --prefix backend/src run start",
+    "dev:worker": "npm run check-env && npm --prefix backend/src run worker",
     "dev:mobile": "npm run check-config && npm --prefix mobile-app/src run start",
     "check-env": "node scripts/checkEnvReminder.js",
     "check-config": "node scripts/checkApiBase.js"
