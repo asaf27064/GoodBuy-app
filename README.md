@@ -65,17 +65,31 @@ The system follows a full-stack architecture composed of three main layers: a mo
 Data is stored in **MongoDB** using **Mongoose** models.
 
 ### Data Ingestion Pipeline
-Automated pipeline that collects and processes supermarket pricing datasets.
+Automated pipeline that collects and processes supermarket pricing datasets, **run by a separate worker process** (`backend/src/jobs/worker.js`) so that heavy scraping work (Puppeteer, FTP, XML parsing) is isolated from the user-facing API.
 
 Main stages:
 
-1. Scraping retailer data sources  
-2. Decompressing pricing files  
-3. Parsing XML price datasets  
-4. Normalizing product data  
+1. Scraping retailer data sources
+2. Decompressing pricing files
+3. Parsing XML price datasets
+4. Normalizing product data
 5. Indexing prices in MongoDB for fast queries
 
-Scheduled jobs run using **node-cron** with concurrency control.
+The worker is triggered either by:
+
+- a **daily cron** at 05:30 Asia/Jerusalem (`node-cron`), or
+- a **manual enqueue** from the API — `POST /api/system/price-refresh` writes a `requestedAt` timestamp to MongoDB; the worker polls for it.
+
+Both paths share a single-flight guard so overlapping runs cannot stack.
+
+### Running locally
+
+```bash
+npm run dev           # api + worker + mobile (concurrently)
+npm run dev:backend   # api only
+npm run dev:worker    # worker only
+npm run dev:mobile    # expo
+```
 
 ### Real-Time Collaboration
 Shared shopping lists are synchronized across devices using **Socket.IO**, enabling multiple users to edit lists simultaneously.

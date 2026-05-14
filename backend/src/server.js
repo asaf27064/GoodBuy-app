@@ -6,7 +6,9 @@ const cors = require('cors')
 const http = require('http')
 const socketIo = require('socket.io')
 const jwt = require('jsonwebtoken')
-require('./scheduler/priceRefreshScheduler');
+// The price-refresh cron + pipeline live in a separate worker process now
+// (backend/src/jobs/worker.js). The API only enqueues — see
+// routes/system.js POST /price-refresh.
 
 const app = express()
 // CORS — allow restricting origins via env without breaking dev (defaults to permissive only when unset)

@@ -2,7 +2,6 @@ const express        = require('express');
 const router         = express.Router();
 const auth           = require('../middleware/auth');
 const SystemMeta     = require('../models/SystemMeta');
-const runPricePpln   = require('../jobs/run-price-pipeline');
 
 function isRunning(meta) {
   return (
@@ -24,14 +23,19 @@ router.get('/price-status', auth, async (req, res) => {
   });
 });
 
-// Triggering the pipeline is expensive — require auth (was wide-open before)
+// Enqueue a refresh. The worker process (backend/src/jobs/worker.js) polls
+// SystemMeta and picks this up; the API does NOT spawn anything itself.
 router.post('/price-refresh', auth, async (req, res) => {
   const meta = await SystemMeta.findById('price-refresh').lean();
 
   if (isRunning(meta))
     return res.status(409).json({ message: 'Refresh already running' });
 
-  runPricePpln().catch(console.error);
+  await SystemMeta.findByIdAndUpdate(
+    'price-refresh',
+    { $set: { requestedAt: new Date() } },
+    { upsert: true }
+  );
   res.json({ message: 'Triggered' });
 });
 

@@ -6,7 +6,11 @@ module.exports = mongoose.model(
     lastRunStart : Date,
     lastRunEnd   : Date,
     lastRunOk    : Boolean,
-    nextPlanned  : Date
+    nextPlanned  : Date,
+    // Queue marker: API writes `requestedAt` when a user clicks "refresh".
+    // The worker process polls for `requestedAt > lastRunStart` and runs the
+    // pipeline. This decouples the API process from the heavy scraping job.
+    requestedAt  : Date,
   }),
   'system_meta'
 )
