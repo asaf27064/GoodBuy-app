@@ -12,7 +12,9 @@
     "dev:mobile": "npm run check-config && npm --prefix mobile-app/src run start",
     "check-env": "node scripts/checkEnvReminder.js",
     "check-config": "node scripts/checkApiBase.js",
-    "test": "npm --prefix backend/src run test"
+    "test": "npm run test:backend && npm run test:mobile",
+    "test:backend": "npm --prefix backend/src run test",
+    "test:mobile": "npm --prefix mobile-app/src run test"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

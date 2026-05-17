@@ -7,7 +7,15 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "jest"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {
+      "^.+\\.[jt]sx?$": ["babel-jest", { "configFile": "./babel.config.js" }]
+    },
+    "testPathIgnorePatterns": ["/node_modules/"]
   },
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",
