@@ -2,14 +2,23 @@
   "scripts": {
     "start": "node server.js",
     "worker": "node jobs/worker.js",
-    "test": "jest"
+    "test": "jest --runInBand"
   },
   "jest": {
     "testEnvironment": "node",
-    "testPathIgnorePatterns": ["/node_modules/", "/priceFetch/"]
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/priceFetch/",
+      "/__tests__/setup/"
+    ],
+    "globalSetup": "<rootDir>/__tests__/setup/globalSetup.js",
+    "globalTeardown": "<rootDir>/__tests__/setup/globalTeardown.js",
+    "setupFilesAfterEnv": ["<rootDir>/__tests__/setup/afterAllSetup.js"],
+    "testTimeout": 30000
   },
   "devDependencies": {
-    "jest": "^30.0.0"
+    "jest": "^30.0.0",
+    "mongodb-memory-server": "^10.0.0"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.812.0",
