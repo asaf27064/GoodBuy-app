@@ -91,5 +91,23 @@ npm run dev:worker    # worker only
 npm run dev:mobile    # expo
 ```
 
+### Running with Docker
+
+For a fully containerised local stack (API + worker + MongoDB), use `docker-compose`:
+
+```bash
+cp backend/src/.env.example backend/src/.env  # then fill in JWT_SECRET etc.
+docker compose up --build
+```
+
+The two backend images are built from a single multi-stage `Dockerfile` with separate targets:
+
+```bash
+docker build --target api    -t goodbuy-api    .
+docker build --target worker -t goodbuy-worker .
+```
+
+The **API** image is a slim Node container with no Chromium. The **worker** image adds system Chromium (for Puppeteer) and Hebrew/CJK fonts (for scraping retailer pages). Both run as a non-root user.
+
 ### Real-Time Collaboration
 Shared shopping lists are synchronized across devices using **Socket.IO**, enabling multiple users to edit lists simultaneously.

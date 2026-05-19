@@ -1,0 +1,37 @@
+# Don't ship dev/host-only directories into Docker build context. Keeps the
+# build snappy and avoids leaking secrets that live outside of source.
+
+# Local installs — Docker installs deps fresh inside the image
+**/node_modules
+
+# VCS + IDE
+.git
+.gitignore
+.gitattributes
+.vscode
+.idea
+.claude
+
+# Tests + CI infra (the API/worker images don't need them at runtime)
+**/__tests__
+.github
+
+# Mobile app — built separately via Expo/EAS, never runs in these images
+mobile-app
+
+# Local logs/caches/temp files
+**/logs
+**/*.log
+**/.DS_Store
+.expo
+dist
+build
+
+# Local env files — values come from the orchestrator (Render env, compose, etc.)
+**/.env
+**/.env.*
+!**/.env.example
+
+# Docs that don't need to be in the image
+README.md
+CLAUDE.md
