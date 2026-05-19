@@ -1,0 +1,60 @@
+# Local-dev orchestration. Brings up MongoDB + the API + the scraping worker
+# from the same root Dockerfile (different build targets). For production,
+# point your hosting provider (Render, Fly, etc.) directly at the Dockerfile
+# and use its own secret management — don't run docker-compose in prod.
+#
+# Usage:
+#   docker compose up --build       # build + start everything
+#   docker compose up api           # just the API
+#   docker compose logs -f worker   # follow worker logs
+#   docker compose down -v          # tear down + wipe Mongo volume
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      target: api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      MONGO_URI: mongodb://mongo:27017/goodbuy
+      # Dev-only placeholders. In real deploys, set these via the host's
+      # secret manager (Render env vars, fly secrets set, etc.) — never
+      # bake them into the image.
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-for-prod}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret-change-me}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      PORT: "3000"
+
+  worker:
+    build:
+      context: .
+      target: worker
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      MONGO_URI: mongodb://mongo:27017/goodbuy
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+
+volumes:
+  mongo_data:
