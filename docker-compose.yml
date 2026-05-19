@@ -3,6 +3,14 @@
 # point your hosting provider (Render, Fly, etc.) directly at the Dockerfile
 # and use its own secret management — don't run docker-compose in prod.
 #
+# Where env vars come from (precedence, low → high):
+#   1. `backend/src/.env`  — pulled via env_file. Loads scraper config
+#                            (R2_*, CHP_API_ENABLED, GEOCODE_API_ENABLED,
+#                            GOOGLE_API_KEY*, PUBLIC_DEV_URL, …)
+#   2. `environment:` block below — overrides any of the above. Used to
+#                            force MONGO_URI to the in-cluster Mongo and
+#                            to inject dev fallbacks for JWT secrets.
+#
 # Usage:
 #   docker compose up --build       # build + start everything
 #   docker compose up api           # just the API
@@ -33,15 +41,20 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
+    # Pull all backend env vars from the user's existing local .env file.
+    # The `environment:` block below then overrides the few that need
+    # docker-specific values.
+    env_file:
+      - path: backend/src/.env
+        required: false
     environment:
+      # Inside compose, the API talks to Mongo via the service name `mongo`,
+      # not localhost. This must override anything in backend/src/.env.
       MONGO_URI: mongodb://mongo:27017/goodbuy
-      # Dev-only placeholders. In real deploys, set these via the host's
-      # secret manager (Render env vars, fly secrets set, etc.) — never
-      # bake them into the image.
+      # Dev fallbacks — only apply if the .env file doesn't define them.
+      # In real deploys (Render/Fly), set these via the host's secret manager.
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-for-prod}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret-change-me}
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
       PORT: "3000"
 
   worker:
@@ -52,9 +65,11 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
+    env_file:
+      - path: backend/src/.env
+        required: false
     environment:
       MONGO_URI: mongodb://mongo:27017/goodbuy
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
 
 volumes:
   mongo_data:
